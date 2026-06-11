@@ -1,5 +1,6 @@
 package com.example.emission.service;
 
+import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.InspectionRecord;
 import com.example.emission.model.Station;
@@ -7,9 +8,12 @@ import com.example.emission.model.UserAccount;
 import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -120,5 +124,57 @@ public class DemoDataService {
             Map.of("name", "国四及以下", "value", 14)
         )
     );
+  }
+
+  public List<StationStatus> stationStatuses() {
+    String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+    return stations().stream()
+        .map(station -> {
+          List<InspectionRecord> stationRecords = inspections.stream()
+              .filter(record -> record.stationName().equals(station.name()))
+              .collect(Collectors.toList());
+
+          List<InspectionRecord> todayRecords = stationRecords.stream()
+              .filter(record -> record.inspectionTime().startsWith(today))
+              .collect(Collectors.toList());
+
+          int todayCount = todayRecords.size();
+          int passedCount = (int) todayRecords.stream()
+              .filter(record -> "合格".equals(record.result()))
+              .count();
+          int failedCount = todayCount - passedCount;
+          double passRate = todayCount > 0
+              ? Math.round(passedCount * 1000.0 / todayCount) / 10.0
+              : 0.0;
+
+          String lastInspectionTime = stationRecords.stream()
+              .max(Comparator.comparing(InspectionRecord::inspectionTime))
+              .map(InspectionRecord::inspectionTime)
+              .orElse("");
+
+          String runningStatus;
+          if (!"正常".equals(station.status())) {
+            runningStatus = "停运";
+          } else if (todayCount > 0) {
+            runningStatus = "运行中";
+          } else {
+            runningStatus = "空闲";
+          }
+
+          return new StationStatus(
+              station.id(),
+              station.name(),
+              station.district(),
+              station.address(),
+              station.phone(),
+              todayCount,
+              passedCount,
+              failedCount,
+              passRate,
+              lastInspectionTime,
+              runningStatus
+          );
+        })
+        .collect(Collectors.toList());
   }
 }

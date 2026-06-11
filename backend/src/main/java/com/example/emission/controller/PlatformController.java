@@ -1,5 +1,6 @@
 package com.example.emission.controller;
 
+import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.InspectionRecord;
 import com.example.emission.model.Station;
@@ -43,6 +44,11 @@ public class PlatformController {
   @GetMapping("/stations")
   public List<Station> stations() {
     return demoDataService.stations();
+  }
+
+  @GetMapping("/stations/status")
+  public List<StationStatus> stationStatuses() {
+    return demoDataService.stationStatuses();
   }
 
   @GetMapping("/announcements")
