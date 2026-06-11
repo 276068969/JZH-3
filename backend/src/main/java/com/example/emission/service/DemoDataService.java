@@ -29,8 +29,19 @@ public class DemoDataService {
 
   private final List<InspectionRecord> inspections = List.of(
       new InspectionRecord("JC20260611001", "京A12345", "朝阳机动车环保检测站", "2026-06-11 09:12", 0.18, 18.4, 32.8, 0.11, "合格", "王工", "已审核"),
+      new InspectionRecord("JC20251215023", "京A12345", "海淀机动车检测中心", "2025-12-15 14:20", 0.20, 20.1, 35.2, 0.13, "合格", "赵工", "已审核"),
+      new InspectionRecord("JC20250620018", "京A12345", "朝阳机动车环保检测站", "2025-06-20 10:45", 0.22, 22.5, 38.0, 0.15, "合格", "王工", "已审核"),
+      new InspectionRecord("JC20241210031", "京A12345", "亦庄机动车检测站", "2024-12-10 16:08", 0.25, 25.3, 41.2, 0.18, "合格", "陈工", "已审核"),
+
       new InspectionRecord("JC20260611002", "京B67890", "海淀机动车检测中心", "2026-06-11 10:05", 0.42, 39.7, 88.1, 0.38, "不合格", "赵工", "待审核"),
-      new InspectionRecord("JC20260610008", "京C24680", "亦庄机动车检测站", "2026-06-10 15:46", 0.16, 15.3, 28.6, 0.09, "合格", "陈工", "已审核")
+      new InspectionRecord("JC20251218045", "京B67890", "朝阳机动车环保检测站", "2025-12-18 11:30", 0.38, 35.2, 75.6, 0.32, "合格", "王工", "已审核"),
+      new InspectionRecord("JC20250615067", "京B67890", "海淀机动车检测中心", "2025-06-15 09:50", 0.40, 38.0, 82.4, 0.35, "合格", "赵工", "已审核"),
+      new InspectionRecord("JC20241205089", "京B67890", "亦庄机动车检测站", "2024-12-05 15:22", 0.36, 33.5, 70.1, 0.30, "合格", "陈工", "已审核"),
+
+      new InspectionRecord("JC20260610008", "京C24680", "亦庄机动车检测站", "2026-06-10 15:46", 0.16, 15.3, 28.6, 0.09, "合格", "陈工", "已审核"),
+      new InspectionRecord("JC20251220012", "京C24680", "朝阳机动车环保检测站", "2025-12-20 13:15", 0.18, 17.2, 30.4, 0.10, "合格", "王工", "已审核"),
+      new InspectionRecord("JC20250625005", "京C24680", "海淀机动车检测中心", "2025-06-25 08:40", 0.15, 14.8, 26.9, 0.08, "合格", "赵工", "已审核"),
+      new InspectionRecord("JC20241212022", "京C24680", "亦庄机动车检测站", "2024-12-12 14:55", 0.17, 16.5, 29.1, 0.09, "合格", "陈工", "已审核")
   );
 
   public Optional<UserAccount> findUser(String username, String password) {
@@ -51,11 +62,16 @@ public class DemoDataService {
   }
 
   public List<InspectionRecord> inspections(String plateNumber) {
+    List<InspectionRecord> result;
     if (plateNumber == null || plateNumber.isBlank()) {
-      return inspections;
+      result = inspections;
+    } else {
+      result = inspections.stream()
+          .filter(record -> record.plateNumber().equalsIgnoreCase(plateNumber.trim()))
+          .toList();
     }
-    return inspections.stream()
-        .filter(record -> record.plateNumber().equalsIgnoreCase(plateNumber.trim()))
+    return result.stream()
+        .sorted((a, b) -> b.inspectionTime().compareTo(a.inspectionTime()))
         .toList();
   }
 

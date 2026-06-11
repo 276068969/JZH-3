@@ -56,6 +56,54 @@
       </div>
     </section>
 
+    <section v-if="vehicle && inspections.length > 0" class="section">
+      <div class="shell">
+        <div class="card">
+          <div class="section-header">
+            <h2>尾气检测履历</h2>
+            <el-tag
+              v-if="inspections[0].result === '不合格'"
+              type="danger"
+              effect="dark"
+              size="large"
+            >
+              ⚠ 最近一次检测不合格，建议尽快复检
+            </el-tag>
+            <el-tag
+              v-else-if="vehicle.environmentalStatus === '待复检'"
+              type="warning"
+              effect="dark"
+              size="large"
+            >
+              待复检
+            </el-tag>
+            <el-tag v-else type="success" effect="dark" size="large">
+              ✓ 检测状态正常
+            </el-tag>
+          </div>
+          <el-table :data="inspections" border stripe>
+            <el-table-column prop="inspectionNo" label="检测编号" min-width="160" />
+            <el-table-column prop="inspectionTime" label="检测时间" min-width="160" />
+            <el-table-column prop="stationName" label="检测站" min-width="200" />
+            <el-table-column prop="result" label="检测结果" width="120">
+              <template #default="{ row }">
+                <el-tag :type="row.result === '合格' ? 'success' : 'danger'" effect="light">
+                  {{ row.result }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="reportStatus" label="报告状态" width="120">
+              <template #default="{ row }">
+                <el-tag :type="row.reportStatus === '已审核' ? 'primary' : 'warning'" effect="plain">
+                  {{ row.reportStatus }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+    </section>
+
     <section class="section" ref="stationSection">
       <div class="shell">
         <h2>检测站信息</h2>
@@ -74,11 +122,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAnnouncements, fetchStations, searchVehicle, type Vehicle } from '@/api/platform'
+import { fetchAnnouncements, fetchInspections, fetchStations, searchVehicle, type InspectionRecord, type Vehicle } from '@/api/platform'
 
 const router = useRouter()
 const keyword = ref('京A12345')
 const vehicle = ref<Vehicle | null>(null)
+const inspections = ref<InspectionRecord[]>([])
 const loading = ref(false)
 const notFound = ref(false)
 const stations = ref([])
@@ -88,9 +137,12 @@ const stationSection = ref<HTMLElement | null>(null)
 const queryVehicle = async () => {
   loading.value = true
   notFound.value = false
+  inspections.value = []
   try {
     const { data } = await searchVehicle(keyword.value)
     vehicle.value = data
+    const inspResp = await fetchInspections(data.plateNumber)
+    inspections.value = inspResp.data
   } catch {
     vehicle.value = null
     notFound.value = true
@@ -118,5 +170,16 @@ h2 {
   display: grid;
   gap: 14px;
   align-content: start;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
 }
 </style>
