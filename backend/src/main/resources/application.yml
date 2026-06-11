@@ -1,0 +1,25 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: emission-regulatory-platform
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:emission_platform}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:emission}
+    password: ${MYSQL_PASSWORD:emission123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+platform:
+  jwt-secret: ${JWT_SECRET:change-me-to-a-long-production-secret}
+  jwt-expire-hours: 12
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true

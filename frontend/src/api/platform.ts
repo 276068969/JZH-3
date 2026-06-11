@@ -1,0 +1,43 @@
+import { http } from './http'
+
+export interface Vehicle {
+  plateNumber: string
+  vin: string
+  vehicleType: string
+  fuelType: string
+  emissionStandard: string
+  owner: string
+  registerDate: string
+  environmentalStatus: string
+}
+
+export interface InspectionRecord {
+  inspectionNo: string
+  plateNumber: string
+  stationName: string
+  inspectionTime: string
+  coValue: number
+  hcValue: number
+  noxValue: number
+  opacityValue: number
+  result: string
+  inspector: string
+  reportStatus: string
+}
+
+export const login = (username: string, password: string) =>
+  http.post('/auth/login', { username, password })
+
+export const fetchDashboard = () => http.get('/dashboard')
+
+export const searchVehicle = (keyword: string) =>
+  http.get<Vehicle>('/vehicles/search', { params: { keyword } })
+
+export const fetchInspections = (plateNumber?: string) =>
+  http.get<InspectionRecord[]>('/inspections', { params: { plateNumber } })
+
+export const fetchStations = () => http.get('/stations')
+
+export const fetchAnnouncements = () => http.get('/announcements')
+
+export const fetchWarnings = () => http.get('/warnings')
