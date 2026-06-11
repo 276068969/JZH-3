@@ -122,7 +122,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchAnnouncements, fetchInspections, fetchStations, searchVehicle, type InspectionRecord, type Vehicle } from '@/api/platform'
+import {
+  fetchAnnouncements,
+  fetchInspections,
+  fetchStations,
+  searchVehicle,
+  type Announcement,
+  type InspectionRecord,
+  type Station,
+  type Vehicle
+} from '@/api/platform'
 
 const router = useRouter()
 const keyword = ref('京A12345')
@@ -130,8 +139,8 @@ const vehicle = ref<Vehicle | null>(null)
 const inspections = ref<InspectionRecord[]>([])
 const loading = ref(false)
 const notFound = ref(false)
-const stations = ref([])
-const announcements = ref([])
+const stations = ref<Station[]>([])
+const announcements = ref<Announcement[]>([])
 const stationSection = ref<HTMLElement | null>(null)
 
 const queryVehicle = async () => {

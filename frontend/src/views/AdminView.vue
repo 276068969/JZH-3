@@ -76,14 +76,14 @@
 import * as echarts from 'echarts'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchDashboard, fetchInspections, fetchWarnings } from '@/api/platform'
+import { fetchDashboard, fetchInspections, fetchWarnings, type InspectionRecord, type WarningRecord } from '@/api/platform'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 const dashboard = ref<any>({})
-const records = ref([])
-const warnings = ref([])
+const records = ref<InspectionRecord[]>([])
+const warnings = ref<WarningRecord[]>([])
 const trendChart = ref<HTMLElement | null>(null)
 const standardChart = ref<HTMLElement | null>(null)
 
