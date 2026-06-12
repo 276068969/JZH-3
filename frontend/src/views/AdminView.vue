@@ -192,7 +192,8 @@ import {
   fetchInspections,
   fetchWarnings,
   type AuditRecord,
-  type InspectionRecord
+  type InspectionRecord,
+  type WarningRecord
 } from '@/api/platform'
 import { useAuthStore } from '@/stores/auth'
 
@@ -201,7 +202,7 @@ const auth = useAuthStore()
 const dashboard = ref<any>({})
 const allRecords = ref<InspectionRecord[]>([])
 const records = ref<InspectionRecord[]>([])
-const warnings = ref([])
+const warnings = ref<WarningRecord[]>([])
 const trendChart = ref<HTMLElement | null>(null)
 const standardChart = ref<HTMLElement | null>(null)
 const statusFilter = ref('all')
