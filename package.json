@@ -1,0 +1,21 @@
+{
+  "name": "jzh-3",
+  "version": "1.0.0",
+  "description": "请开发一个“机动车尾气监管平台”全栈 Web 应用，系统包含前台用户端、后台管理端，并支持通过 Docker 一键部署。系统主要用于机动车尾气检测、车辆环保信息管理、检测站监管、数据统计分析和异常预警。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/276068969/JZH-3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/276068969/JZH-3/issues"
+  },
+  "homepage": "https://github.com/276068969/JZH-3#readme"
+}
