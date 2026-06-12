@@ -1,5 +1,7 @@
 package com.example.emission.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class InspectionRecord {
     private String inspectionNo;
     private String plateNumber;
@@ -34,23 +36,59 @@ public class InspectionRecord {
         this.reportStatus = reportStatus;
     }
 
-    public String inspectionNo() { return inspectionNo; }
-    public String plateNumber() { return plateNumber; }
-    public String stationName() { return stationName; }
-    public String inspectionTime() { return inspectionTime; }
-    public double coValue() { return coValue; }
-    public double hcValue() { return hcValue; }
-    public double noxValue() { return noxValue; }
-    public double opacityValue() { return opacityValue; }
-    public String result() { return result; }
-    public String inspector() { return inspector; }
-    public String reportStatus() { return reportStatus; }
-    public String auditor() { return auditor; }
-    public String auditTime() { return auditTime; }
-    public String auditOpinion() { return auditOpinion; }
+    @JsonProperty("inspectionNo")
+    public String getInspectionNo() { return inspectionNo; }
+    public void setInspectionNo(String inspectionNo) { this.inspectionNo = inspectionNo; }
 
+    @JsonProperty("plateNumber")
+    public String getPlateNumber() { return plateNumber; }
+    public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
+
+    @JsonProperty("stationName")
+    public String getStationName() { return stationName; }
+    public void setStationName(String stationName) { this.stationName = stationName; }
+
+    @JsonProperty("inspectionTime")
+    public String getInspectionTime() { return inspectionTime; }
+    public void setInspectionTime(String inspectionTime) { this.inspectionTime = inspectionTime; }
+
+    @JsonProperty("coValue")
+    public double getCoValue() { return coValue; }
+    public void setCoValue(double coValue) { this.coValue = coValue; }
+
+    @JsonProperty("hcValue")
+    public double getHcValue() { return hcValue; }
+    public void setHcValue(double hcValue) { this.hcValue = hcValue; }
+
+    @JsonProperty("noxValue")
+    public double getNoxValue() { return noxValue; }
+    public void setNoxValue(double noxValue) { this.noxValue = noxValue; }
+
+    @JsonProperty("opacityValue")
+    public double getOpacityValue() { return opacityValue; }
+    public void setOpacityValue(double opacityValue) { this.opacityValue = opacityValue; }
+
+    @JsonProperty("result")
+    public String getResult() { return result; }
+    public void setResult(String result) { this.result = result; }
+
+    @JsonProperty("inspector")
+    public String getInspector() { return inspector; }
+    public void setInspector(String inspector) { this.inspector = inspector; }
+
+    @JsonProperty("reportStatus")
+    public String getReportStatus() { return reportStatus; }
     public void setReportStatus(String reportStatus) { this.reportStatus = reportStatus; }
+
+    @JsonProperty("auditor")
+    public String getAuditor() { return auditor; }
     public void setAuditor(String auditor) { this.auditor = auditor; }
+
+    @JsonProperty("auditTime")
+    public String getAuditTime() { return auditTime; }
     public void setAuditTime(String auditTime) { this.auditTime = auditTime; }
+
+    @JsonProperty("auditOpinion")
+    public String getAuditOpinion() { return auditOpinion; }
     public void setAuditOpinion(String auditOpinion) { this.auditOpinion = auditOpinion; }
 }

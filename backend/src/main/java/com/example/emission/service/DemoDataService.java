@@ -69,8 +69,8 @@ public class DemoDataService {
     return vehicles.stream()
         .filter(vehicle -> vehicle.plateNumber().equalsIgnoreCase(normalized)
             || vehicle.vin().equalsIgnoreCase(normalized)
-            || inspections.stream().anyMatch(record -> record.inspectionNo().equalsIgnoreCase(normalized)
-                && record.plateNumber().equals(vehicle.plateNumber())))
+            || inspections.stream().anyMatch(record -> record.getInspectionNo().equalsIgnoreCase(normalized)
+                && record.getPlateNumber().equals(vehicle.plateNumber())))
         .findFirst();
   }
 
@@ -80,11 +80,11 @@ public class DemoDataService {
       result = new ArrayList<>(inspections);
     } else {
       result = inspections.stream()
-          .filter(record -> record.plateNumber().equalsIgnoreCase(plateNumber.trim()))
+          .filter(record -> record.getPlateNumber().equalsIgnoreCase(plateNumber.trim()))
           .collect(Collectors.toList());
     }
     return result.stream()
-        .sorted((a, b) -> b.inspectionTime().compareTo(a.inspectionTime()))
+        .sorted((a, b) -> b.getInspectionTime().compareTo(a.getInspectionTime()))
         .collect(Collectors.toList());
   }
 
@@ -113,7 +113,7 @@ public class DemoDataService {
 
   public Map<String, Object> dashboard() {
     long pendingCount = inspections.stream()
-        .filter(r -> "待审核".equals(r.reportStatus()))
+        .filter(r -> "待审核".equals(r.getReportStatus()))
         .count();
 
     return Map.of(
@@ -145,16 +145,16 @@ public class DemoDataService {
     return stations().stream()
         .map(station -> {
           List<InspectionRecord> stationRecords = inspections.stream()
-              .filter(record -> record.stationName().equals(station.name()))
+              .filter(record -> record.getStationName().equals(station.name()))
               .collect(Collectors.toList());
 
           List<InspectionRecord> todayRecords = stationRecords.stream()
-              .filter(record -> record.inspectionTime().startsWith(today))
+              .filter(record -> record.getInspectionTime().startsWith(today))
               .collect(Collectors.toList());
 
           int todayCount = todayRecords.size();
           int passedCount = (int) todayRecords.stream()
-              .filter(record -> "合格".equals(record.result()))
+              .filter(record -> "合格".equals(record.getResult()))
               .count();
           int failedCount = todayCount - passedCount;
           double passRate = todayCount > 0
@@ -162,8 +162,8 @@ public class DemoDataService {
               : 0.0;
 
           String lastInspectionTime = stationRecords.stream()
-              .max(Comparator.comparing(InspectionRecord::inspectionTime))
-              .map(InspectionRecord::inspectionTime)
+              .max(Comparator.comparing(InspectionRecord::getInspectionTime))
+              .map(InspectionRecord::getInspectionTime)
               .orElse("");
 
           String runningStatus;
@@ -198,7 +198,7 @@ public class DemoDataService {
     String opinion = request.getOpinion();
 
     Optional<InspectionRecord> recordOpt = inspections.stream()
-        .filter(r -> r.inspectionNo().equals(inspectionNo))
+        .filter(r -> r.getInspectionNo().equals(inspectionNo))
         .findFirst();
 
     if (recordOpt.isEmpty()) {
@@ -206,7 +206,7 @@ public class DemoDataService {
     }
 
     InspectionRecord record = recordOpt.get();
-    if (!"待审核".equals(record.reportStatus())) {
+    if (!"待审核".equals(record.getReportStatus())) {
       return Map.of("success", false, "message", "该记录状态不是待审核");
     }
 
