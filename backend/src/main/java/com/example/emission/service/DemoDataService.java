@@ -1,18 +1,24 @@
 package com.example.emission.service;
 
+import com.example.emission.dto.AuditRequest;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
+import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
 import com.example.emission.model.Station;
 import com.example.emission.model.UserAccount;
 import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +37,7 @@ public class DemoDataService {
       new Vehicle("京C24680", "LFPH4ACC9N1A20458", "小型客车", "混合动力", "国六", "李女士", "2022-10-09", "合格")
   );
 
-  private final List<InspectionRecord> inspections = List.of(
+  private final List<InspectionRecord> inspections = new ArrayList<>(List.of(
       new InspectionRecord("JC20260611001", "京A12345", "朝阳机动车环保检测站", "2026-06-11 09:12", 0.18, 18.4, 32.8, 0.11, "合格", "王工", "已审核"),
       new InspectionRecord("JC20251215023", "京A12345", "海淀机动车检测中心", "2025-12-15 14:20", 0.20, 20.1, 35.2, 0.13, "合格", "赵工", "已审核"),
       new InspectionRecord("JC20250620018", "京A12345", "朝阳机动车环保检测站", "2025-06-20 10:45", 0.22, 22.5, 38.0, 0.15, "合格", "王工", "已审核"),
@@ -46,7 +52,10 @@ public class DemoDataService {
       new InspectionRecord("JC20251220012", "京C24680", "朝阳机动车环保检测站", "2025-12-20 13:15", 0.18, 17.2, 30.4, 0.10, "合格", "王工", "已审核"),
       new InspectionRecord("JC20250625005", "京C24680", "海淀机动车检测中心", "2025-06-25 08:40", 0.15, 14.8, 26.9, 0.08, "合格", "赵工", "已审核"),
       new InspectionRecord("JC20241212022", "京C24680", "亦庄机动车检测站", "2024-12-12 14:55", 0.17, 16.5, 29.1, 0.09, "合格", "陈工", "已审核")
-  );
+  ));
+
+  private final List<AuditRecord> auditRecords = new ArrayList<>();
+  private final AtomicLong auditRecordIdGenerator = new AtomicLong(1);
 
   public Optional<UserAccount> findUser(String username, String password) {
     if (!"123456".equals(password)) {
@@ -68,15 +77,15 @@ public class DemoDataService {
   public List<InspectionRecord> inspections(String plateNumber) {
     List<InspectionRecord> result;
     if (plateNumber == null || plateNumber.isBlank()) {
-      result = inspections;
+      result = new ArrayList<>(inspections);
     } else {
       result = inspections.stream()
           .filter(record -> record.plateNumber().equalsIgnoreCase(plateNumber.trim()))
-          .toList();
+          .collect(Collectors.toList());
     }
     return result.stream()
         .sorted((a, b) -> b.inspectionTime().compareTo(a.inspectionTime()))
-        .toList();
+        .collect(Collectors.toList());
   }
 
   public List<Station> stations() {
@@ -103,11 +112,16 @@ public class DemoDataService {
   }
 
   public Map<String, Object> dashboard() {
+    long pendingCount = inspections.stream()
+        .filter(r -> "待审核".equals(r.reportStatus()))
+        .count();
+
     return Map.of(
         "todayInspections", 126,
         "passedVehicles", 112,
         "failedVehicles", 14,
         "exceedRate", 11.1,
+        "pendingAudit", pendingCount,
         "stationCount", stations().size(),
         "trend", List.of(
             Map.of("date", LocalDate.now().minusDays(6).toString(), "count", 91),
@@ -175,6 +189,57 @@ public class DemoDataService {
               runningStatus
           );
         })
+        .collect(Collectors.toList());
+  }
+
+  public synchronized Map<String, Object> audit(AuditRequest request, String auditor) {
+    String inspectionNo = request.getInspectionNo();
+    String action = request.getAction();
+    String opinion = request.getOpinion();
+
+    Optional<InspectionRecord> recordOpt = inspections.stream()
+        .filter(r -> r.inspectionNo().equals(inspectionNo))
+        .findFirst();
+
+    if (recordOpt.isEmpty()) {
+      return Map.of("success", false, "message", "检测记录不存在");
+    }
+
+    InspectionRecord record = recordOpt.get();
+    if (!"待审核".equals(record.reportStatus())) {
+      return Map.of("success", false, "message", "该记录状态不是待审核");
+    }
+
+    String newStatus = "PASS".equals(action) ? "已审核" : "已退回";
+    String actionName = "PASS".equals(action) ? "通过" : "退回";
+    String auditTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+    record.setReportStatus(newStatus);
+    record.setAuditor(auditor);
+    record.setAuditTime(auditTime);
+    record.setAuditOpinion(opinion);
+
+    AuditRecord auditRecord = new AuditRecord(
+        auditRecordIdGenerator.getAndIncrement(),
+        inspectionNo,
+        actionName,
+        opinion,
+        auditor,
+        auditTime
+    );
+    auditRecords.add(auditRecord);
+
+    return Map.of(
+        "success", true,
+        "message", "审核" + actionName + "成功",
+        "record", record
+    );
+  }
+
+  public List<AuditRecord> getAuditRecords(String inspectionNo) {
+    return auditRecords.stream()
+        .filter(r -> r.inspectionNo().equals(inspectionNo))
+        .sorted((a, b) -> b.auditTime().compareTo(a.auditTime()))
         .collect(Collectors.toList());
   }
 }

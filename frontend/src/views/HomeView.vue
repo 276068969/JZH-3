@@ -94,11 +94,14 @@
             </el-table-column>
             <el-table-column prop="reportStatus" label="报告状态" width="120">
               <template #default="{ row }">
-                <el-tag :type="row.reportStatus === '已审核' ? 'primary' : 'warning'" effect="plain">
+                <el-tag :type="getStatusType(row.reportStatus)" effect="plain">
                   {{ row.reportStatus }}
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column prop="auditor" label="审核人" width="100" />
+            <el-table-column prop="auditTime" label="审核时间" min-width="160" />
+            <el-table-column prop="auditOpinion" label="审核意见" min-width="180" />
           </el-table>
         </div>
       </div>
@@ -122,16 +125,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  fetchAnnouncements,
-  fetchInspections,
-  fetchStations,
-  searchVehicle,
-  type Announcement,
-  type InspectionRecord,
-  type Station,
-  type Vehicle
-} from '@/api/platform'
+import { fetchAnnouncements, fetchInspections, fetchStations, searchVehicle, type InspectionRecord, type Vehicle } from '@/api/platform'
 
 const router = useRouter()
 const keyword = ref('京A12345')
@@ -139,8 +133,8 @@ const vehicle = ref<Vehicle | null>(null)
 const inspections = ref<InspectionRecord[]>([])
 const loading = ref(false)
 const notFound = ref(false)
-const stations = ref<Station[]>([])
-const announcements = ref<Announcement[]>([])
+const stations = ref([])
+const announcements = ref([])
 const stationSection = ref<HTMLElement | null>(null)
 
 const queryVehicle = async () => {
@@ -158,6 +152,13 @@ const queryVehicle = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const getStatusType = (status: string) => {
+  if (status === '已审核') return 'primary'
+  if (status === '待审核') return 'warning'
+  if (status === '已退回') return 'danger'
+  return 'info'
 }
 
 const scrollToStations = () => stationSection.value?.scrollIntoView({ behavior: 'smooth' })

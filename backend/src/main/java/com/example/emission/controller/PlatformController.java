@@ -1,7 +1,9 @@
 package com.example.emission.controller;
 
+import com.example.emission.dto.AuditRequest;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
+import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
 import com.example.emission.model.Station;
 import com.example.emission.model.Vehicle;
@@ -10,7 +12,10 @@ import com.example.emission.service.DemoDataService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +44,17 @@ public class PlatformController {
   @GetMapping("/inspections")
   public List<InspectionRecord> inspections(@RequestParam(required = false) String plateNumber) {
     return demoDataService.inspections(plateNumber);
+  }
+
+  @PostMapping("/inspections/audit")
+  public Map<String, Object> audit(@RequestBody AuditRequest request, Authentication authentication) {
+    String auditor = authentication != null ? authentication.getName() : "system";
+    return demoDataService.audit(request, auditor);
+  }
+
+  @GetMapping("/inspections/audit-records")
+  public List<AuditRecord> auditRecords(@RequestParam String inspectionNo) {
+    return demoDataService.getAuditRecords(inspectionNo);
   }
 
   @GetMapping("/stations")

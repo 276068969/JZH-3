@@ -34,5 +34,18 @@ CREATE TABLE IF NOT EXISTS inspection_records (
   opacity_value DECIMAL(8, 3) NOT NULL,
   result VARCHAR(32) NOT NULL,
   inspector VARCHAR(64) NOT NULL,
-  report_status VARCHAR(32) NOT NULL
+  report_status VARCHAR(32) NOT NULL,
+  auditor VARCHAR(64),
+  audit_time DATETIME,
+  audit_opinion TEXT
+);
+
+CREATE TABLE IF NOT EXISTS audit_records (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  inspection_no VARCHAR(64) NOT NULL,
+  audit_action VARCHAR(32) NOT NULL,
+  audit_opinion TEXT,
+  auditor VARCHAR(64) NOT NULL,
+  audit_time DATETIME NOT NULL,
+  INDEX idx_inspection_no (inspection_no)
 );

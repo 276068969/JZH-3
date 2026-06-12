@@ -23,28 +23,24 @@ export interface InspectionRecord {
   result: string
   inspector: string
   reportStatus: string
+  auditor?: string
+  auditTime?: string
+  auditOpinion?: string
 }
 
-export interface Station {
+export interface AuditRecord {
   id: number
-  name: string
-  district: string
-  address: string
-  phone: string
-  status: string
+  inspectionNo: string
+  auditAction: string
+  auditOpinion: string
+  auditor: string
+  auditTime: string
 }
 
-export interface Announcement {
-  id: number
-  title: string
-  publishDate: string
-}
-
-export interface WarningRecord {
-  plateNumber: string
-  pollutant: string
-  level: string
-  description: string
+export interface AuditRequest {
+  inspectionNo: string
+  action: 'PASS' | 'REJECT'
+  opinion: string
 }
 
 export const login = (username: string, password: string) =>
@@ -58,8 +54,14 @@ export const searchVehicle = (keyword: string) =>
 export const fetchInspections = (plateNumber?: string) =>
   http.get<InspectionRecord[]>('/inspections', { params: { plateNumber } })
 
-export const fetchStations = () => http.get<Station[]>('/stations')
+export const fetchStations = () => http.get('/stations')
 
-export const fetchAnnouncements = () => http.get<Announcement[]>('/announcements')
+export const fetchAnnouncements = () => http.get('/announcements')
 
-export const fetchWarnings = () => http.get<WarningRecord[]>('/warnings')
+export const fetchWarnings = () => http.get('/warnings')
+
+export const auditInspection = (data: AuditRequest) =>
+  http.post('/inspections/audit', data)
+
+export const fetchAuditRecords = (inspectionNo: string) =>
+  http.get<AuditRecord[]>('/inspections/audit-records', { params: { inspectionNo } })
