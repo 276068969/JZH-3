@@ -238,7 +238,8 @@ public class DemoDataService {
     List<Map<String, Object>> trend = new ArrayList<>();
     for (int i = days - 1; i >= 0; i--) {
       LocalDate date = LocalDate.now().minusDays(i);
-      int baseCount = 90 + (int) (Math.sin(i * 0.8) * 20) + (days > 14 ? (int) (Math.random() * 30) : 0);
+      int extra = Math.abs(date.hashCode()) % 22;
+      int baseCount = 85 + (int) (Math.sin(i * 0.6) * 18) + extra;
       trend.add(Map.of("date", date.toString(), "count", baseCount));
     }
 
