@@ -62,7 +62,13 @@ export interface Station {
 export interface Announcement {
   id: number
   title: string
-  publishDate: string
+  content?: string
+  type?: string
+  publishStatus?: string
+  publisher?: string
+  publishTime?: string
+  createTime?: string
+  updateTime?: string
 }
 
 export interface WarningRecord {

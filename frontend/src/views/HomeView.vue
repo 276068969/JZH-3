@@ -49,7 +49,7 @@
         <div class="card">
           <h2>最新公告</h2>
           <el-timeline>
-            <el-timeline-item v-for="item in announcements" :key="item.id" :timestamp="item.publishDate">
+            <el-timeline-item v-for="item in announcements" :key="item.id" :timestamp="formatDate(item.publishTime)">
               {{ item.title }}
             </el-timeline-item>
           </el-timeline>
@@ -252,6 +252,14 @@ const getStatusType = (status: string) => {
 }
 
 const scrollToStations = () => stationSection.value?.scrollIntoView({ behavior: 'smooth' })
+
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr) return ''
+  if (dateStr.includes(' ')) {
+    return dateStr.split(' ')[0]
+  }
+  return dateStr
+}
 
 const viewReportDetail = (row: InspectionRecord) => {
   router.push({ name: 'report-detail', params: { inspectionNo: row.inspectionNo } })
