@@ -4,6 +4,7 @@ import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
 import com.example.emission.dto.ErrorCode;
 import com.example.emission.dto.StationStatus;
+import com.example.emission.dto.WarningHandleRequest;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
@@ -58,6 +59,12 @@ public class DemoDataService {
 
   private final List<AuditRecord> auditRecords = new ArrayList<>();
   private final AtomicLong auditRecordIdGenerator = new AtomicLong(1);
+
+  private WarningRecord createWarning(Long id, String plateNumber, String pollutant,
+                                      String level, String description, String status, String createdAt) {
+    WarningRecord w = new WarningRecord(id, plateNumber, pollutant, level, description, status, createdAt);
+    return w;
+  }
 
   public Optional<UserAccount> findUser(String username, String password) {
     if (!"123456".equals(password)) {
@@ -210,12 +217,14 @@ public class DemoDataService {
     );
   }
 
-  public List<WarningRecord> warnings() {
-    return List.of(
-        new WarningRecord("京B67890", "NOx", "高", "氮氧化物检测值超过限值，需复检"),
-        new WarningRecord("京D13579", "烟度", "中", "柴油车烟度值接近预警阈值")
-    );
-  }
+  private final List<WarningRecord> warningRecords = new ArrayList<>(List.of(
+      createWarning(1L, "京B67890", "NOx", "高", "氮氧化物检测值超过限值，需复检", "待处置", "2026-06-11 10:30"),
+      createWarning(2L, "京D13579", "烟度", "中", "柴油车烟度值接近预警阈值", "待处置", "2026-06-10 15:20"),
+      createWarning(3L, "京A12345", "CO", "低", "一氧化碳检测值略超限值", "待处置", "2026-06-09 09:15"),
+      createWarning(4L, "京E88888", "HC", "高", "碳氢化合物严重超标，需立即处置", "待处置", "2026-06-08 14:45")
+  ));
+
+  private final AtomicLong warningIdGenerator = new AtomicLong(5);
 
   public Map<String, Object> dashboard() {
     long pendingCount = inspections.stream()
@@ -352,6 +361,66 @@ public class DemoDataService {
     return auditRecords.stream()
         .filter(r -> r.inspectionNo().equals(inspectionNo))
         .sorted((a, b) -> b.auditTime().compareTo(a.auditTime()))
+        .collect(Collectors.toList());
+  }
+
+  public List<WarningRecord> warnings() {
+    return new ArrayList<>(warningRecords);
+  }
+
+  public Optional<WarningRecord> getWarningById(Long id) {
+    return warningRecords.stream()
+        .filter(w -> w.getId().equals(id))
+        .findFirst();
+  }
+
+  public synchronized Map<String, Object> handleWarning(WarningHandleRequest request, String handler) {
+    Long warningId = request.getWarningId();
+
+    Optional<WarningRecord> warningOpt = warningRecords.stream()
+        .filter(w -> w.getId().equals(warningId))
+        .findFirst();
+
+    if (warningOpt.isEmpty()) {
+      return Map.of("success", false, "message", "预警记录不存在");
+    }
+
+    WarningRecord warning = warningOpt.get();
+
+    if ("已处置".equals(warning.getStatus())) {
+      return Map.of("success", false, "message", "该预警已处置完成，不可重复处置");
+    }
+
+    String status = request.getStatus();
+    if (status == null || status.isBlank()) {
+      status = "处置中";
+    }
+
+    String handleTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+    warning.setStatus(status);
+    warning.setHandler(handler);
+    warning.setHandleTime(handleTime);
+    warning.setHandleOpinion(request.getHandleOpinion());
+    warning.setReinspectRequired(request.isReinspectRequired());
+    if (request.isReinspectRequired() && request.getReinspectDeadline() != null && !request.getReinspectDeadline().isBlank()) {
+      warning.setReinspectDeadline(request.getReinspectDeadline());
+    }
+
+    return Map.of(
+        "success", true,
+        "message", "预警处置成功",
+        "record", warning
+    );
+  }
+
+  public List<InspectionRecord> getInspectionsByPlate(String plateNumber) {
+    if (plateNumber == null || plateNumber.isBlank()) {
+      return List.of();
+    }
+    return inspections.stream()
+        .filter(r -> r.getPlateNumber().equalsIgnoreCase(plateNumber.trim()))
+        .sorted((a, b) -> b.getInspectionTime().compareTo(a.getInspectionTime()))
         .collect(Collectors.toList());
   }
 }

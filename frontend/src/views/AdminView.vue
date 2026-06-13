@@ -41,11 +41,33 @@
             <div ref="standardChart" class="chart"></div>
           </div>
           <div class="card">
-            <h2>超标车辆预警</h2>
-            <el-table :data="warnings" height="280">
+            <div class="section-header">
+              <h2>超标车辆预警</h2>
+              <el-radio-group v-model="warningFilter" size="small">
+                <el-radio-button label="all">全部</el-radio-button>
+                <el-radio-button label="pending">待处置</el-radio-button>
+                <el-radio-button label="processing">处置中</el-radio-button>
+                <el-radio-button label="done">已处置</el-radio-button>
+              </el-radio-group>
+            </div>
+            <el-table :data="filteredWarnings" height="280">
               <el-table-column prop="plateNumber" label="车牌" width="105" />
               <el-table-column prop="pollutant" label="污染物" width="90" />
-              <el-table-column prop="level" label="等级" />
+              <el-table-column prop="level" label="等级" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="getLevelType(row.level)" size="small" effect="light">{{ row.level }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="getWarningStatusType(row.status)" size="small" effect="plain">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="80">
+                <template #default="{ row }">
+                  <el-button type="primary" link size="small" @click="goToWarningHandle(row)">处置</el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </div>
@@ -206,6 +228,7 @@ const warnings = ref<WarningRecord[]>([])
 const trendChart = ref<HTMLElement | null>(null)
 const standardChart = ref<HTMLElement | null>(null)
 const statusFilter = ref('all')
+const warningFilter = ref('all')
 
 const auditDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
@@ -231,11 +254,37 @@ const filteredRecords = computed(() => {
   return records.value
 })
 
+const filteredWarnings = computed(() => {
+  if (warningFilter.value === 'all') return warnings.value
+  if (warningFilter.value === 'pending') return warnings.value.filter(w => w.status === '待处置')
+  if (warningFilter.value === 'processing') return warnings.value.filter(w => w.status === '处置中')
+  if (warningFilter.value === 'done') return warnings.value.filter(w => w.status === '已处置' || w.status === '已复检')
+  return warnings.value
+})
+
 const getStatusType = (status: string) => {
   if (status === '已审核') return 'primary'
   if (status === '待审核') return 'warning'
   if (status === '已退回') return 'danger'
   return 'info'
+}
+
+const getLevelType = (level: string) => {
+  if (level === '高') return 'danger'
+  if (level === '中') return 'warning'
+  return 'info'
+}
+
+const getWarningStatusType = (status: string) => {
+  if (status === '待处置') return 'danger'
+  if (status === '处置中') return 'warning'
+  if (status === '已处置') return 'success'
+  if (status === '已复检') return 'primary'
+  return 'info'
+}
+
+const goToWarningHandle = (row: WarningRecord) => {
+  router.push({ name: 'warning-handle', params: { id: row.id } })
 }
 
 const logout = async () => {

@@ -3,6 +3,7 @@ package com.example.emission.controller;
 import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
 import com.example.emission.dto.StationStatus;
+import com.example.emission.dto.WarningHandleRequest;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
@@ -81,5 +82,23 @@ public class PlatformController {
   @GetMapping("/warnings")
   public List<WarningRecord> warnings() {
     return demoDataService.warnings();
+  }
+
+  @GetMapping("/warnings/detail")
+  public ResponseEntity<WarningRecord> warningDetail(@RequestParam Long id) {
+    return demoDataService.getWarningById(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @PostMapping("/warnings/handle")
+  public Map<String, Object> handleWarning(@RequestBody WarningHandleRequest request, Authentication authentication) {
+    String handler = authentication != null ? authentication.getName() : "system";
+    return demoDataService.handleWarning(request, handler);
+  }
+
+  @GetMapping("/warnings/inspections")
+  public List<InspectionRecord> warningInspections(@RequestParam String plateNumber) {
+    return demoDataService.getInspectionsByPlate(plateNumber);
   }
 }
