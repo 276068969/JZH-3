@@ -374,6 +374,22 @@ public class DemoDataService {
         .findFirst();
   }
 
+  private boolean isValidTransition(String current, String target, boolean reinspectRequired) {
+    if ("已复检".equals(current)) {
+      return false;
+    }
+    if ("已处置".equals(current)) {
+      return reinspectRequired && "已复检".equals(target);
+    }
+    if ("处置中".equals(current)) {
+      return "已处置".equals(target) || "处置中".equals(target);
+    }
+    if ("待处置".equals(current)) {
+      return "处置中".equals(target) || "已处置".equals(target);
+    }
+    return false;
+  }
+
   public synchronized Map<String, Object> handleWarning(WarningHandleRequest request, String handler) {
     Long warningId = request.getWarningId();
 
@@ -387,14 +403,16 @@ public class DemoDataService {
 
     WarningRecord warning = warningOpt.get();
 
-    if ("已处置".equals(warning.getStatus())) {
-      return Map.of("success", false, "message", "该预警已处置完成，不可重复处置");
+    String targetStatus = request.getStatus();
+    if (targetStatus == null || targetStatus.isBlank()) {
+      targetStatus = "处置中";
     }
 
-    String status = request.getStatus();
-    if (status == null || status.isBlank()) {
-      status = "处置中";
+    if (!isValidTransition(warning.getStatus(), targetStatus, warning.isReinspectRequired())) {
+      return Map.of("success", false, "message", "当前状态「" + warning.getStatus() + "」不允许转换到「" + targetStatus + "」");
     }
+
+    String status = targetStatus;
 
     String handleTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 

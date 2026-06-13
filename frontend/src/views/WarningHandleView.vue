@@ -290,8 +290,8 @@ const statusTagType = computed(() => {
 
 const flowStepActive = computed(() => {
   if (!warning.value) return 0
-  if (warning.value.status === '已复检') return 4
-  if (warning.value.status === '已处置') return warning.value.reinspectRequired ? 2 : 3
+  if (warning.value.status === '已复检') return warning.value.reinspectRequired ? 4 : 3
+  if (warning.value.status === '已处置') return 2
   if (warning.value.status === '处置中') return 1
   return 0
 })
