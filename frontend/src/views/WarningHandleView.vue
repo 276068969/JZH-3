@@ -194,7 +194,7 @@
             </el-form>
           </div>
 
-          <div v-if="warning.status === '已处置' && warning.reinspectRequired && warning.status !== '已复检'" class="card" style="margin-top: 16px">
+          <div v-if="warning.status === '已处置' && warning.reinspectRequired" class="card" style="margin-top: 16px">
             <div class="reinspect-action">
               <div>
                 <h2 class="card-title">
