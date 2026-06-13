@@ -1,5 +1,6 @@
 package com.example.emission.controller;
 
+import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
@@ -35,10 +36,8 @@ public class PlatformController {
   }
 
   @GetMapping("/vehicles/search")
-  public ResponseEntity<Vehicle> searchVehicle(@RequestParam String keyword) {
-    return demoDataService.searchVehicle(keyword)
-        .map(ResponseEntity::ok)
-        .orElseGet(() -> ResponseEntity.notFound().build());
+  public ApiResponse<Vehicle> searchVehicle(@RequestParam(required = false) String keyword) {
+    return demoDataService.searchVehicleWithValidation(keyword);
   }
 
   @GetMapping("/inspections")

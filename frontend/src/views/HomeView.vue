@@ -25,9 +25,10 @@
       <div class="shell grid grid-3">
         <div class="card query-card">
           <h2>车辆查询</h2>
-          <el-input v-model="keyword" size="large" placeholder="输入车牌号、VIN 或检测报告编号" clearable />
+          <el-input v-model="keyword" size="large" placeholder="输入车牌号、VIN 或检测报告编号" clearable maxlength="30" show-word-limit @keyup.enter="queryVehicle" />
           <el-button type="primary" size="large" :loading="loading" @click="queryVehicle">查询</el-button>
-          <el-alert v-if="notFound" title="未找到匹配车辆" type="warning" show-icon />
+          <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" />
+          <el-alert v-if="successMessage && !errorMessage" :title="successMessage" type="success" show-icon :closable="false" />
         </div>
 
         <div v-if="vehicle" class="card result-card">
@@ -136,12 +137,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   fetchAnnouncements,
   fetchInspections,
   fetchStations,
   searchVehicle,
   type Announcement,
+  type ApiResponse,
   type InspectionRecord,
   type Station,
   type Vehicle
@@ -152,23 +155,90 @@ const keyword = ref('京A12345')
 const vehicle = ref<Vehicle | null>(null)
 const inspections = ref<InspectionRecord[]>([])
 const loading = ref(false)
-const notFound = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 const stations = ref<Station[]>([])
 const announcements = ref<Announcement[]>([])
 const stationSection = ref<HTMLElement | null>(null)
 
+const normalizeKeyword = (raw: string | null | undefined): string => {
+  if (!raw) return ''
+  return raw
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/　/g, '')
+    .replace(/\u00A0/g, '')
+    .replace(/\u200B/g, '')
+    .replace(/\uFEFF/g, '')
+    .toUpperCase()
+}
+
+const getErrorMessageByCode = (code: string, fallback: string): string => {
+  const errorMap: Record<string, string> = {
+    EMPTY_KEYWORD: '请输入车牌号、VIN 或检测报告编号',
+    KEYWORD_TOO_SHORT: '输入内容过短，请至少输入 2 个字符',
+    KEYWORD_TOO_LONG: '输入内容过长，请控制在 30 个字符以内',
+    VEHICLE_NOT_FOUND: '未找到匹配的车辆，请检查输入是否正确。支持车牌号、17位VIN码或检测报告编号查询',
+    PLATE_NOT_FOUND: '未找到该车牌号对应的车辆，请核对车牌号是否正确',
+    VIN_NOT_FOUND: '未找到该 VIN 对应的车辆，请核对车辆识别代号是否正确',
+    INSPECTION_NOT_FOUND: '未找到该检测报告编号对应的记录，请核对报告编号是否正确',
+    VEHICLE_NOT_FOUND_BY_INSPECTION: '检测报告编号存在，但未找到关联的车辆信息',
+    INTERNAL_ERROR: '系统内部错误，请稍后重试'
+  }
+  return errorMap[code] || fallback
+}
+
 const queryVehicle = async () => {
   loading.value = true
-  notFound.value = false
+  errorMessage.value = ''
+  successMessage.value = ''
   inspections.value = []
   try {
-    const { data } = await searchVehicle(keyword.value)
-    vehicle.value = data
-    const inspResp = await fetchInspections(data.plateNumber)
-    inspections.value = inspResp.data
-  } catch {
+    const normalizedKeyword = normalizeKeyword(keyword.value)
+    if (!normalizedKeyword) {
+      errorMessage.value = '请输入车牌号、VIN 或检测报告编号'
+      vehicle.value = null
+      return
+    }
+
+    if (normalizedKeyword.length < 2) {
+      errorMessage.value = '输入内容过短，请至少输入 2 个字符'
+      vehicle.value = null
+      return
+    }
+
+    if (keyword.value && keyword.value.trim() !== normalizedKeyword) {
+      keyword.value = normalizedKeyword
+    }
+
+    const { data } = await searchVehicle(normalizedKeyword)
+    const resp = data as ApiResponse<Vehicle>
+
+    if (resp.success && resp.data) {
+      vehicle.value = resp.data
+      if (resp.message) {
+        successMessage.value = resp.message
+      }
+      try {
+        const inspResp = await fetchInspections(resp.data.plateNumber)
+        inspections.value = inspResp.data
+      } catch {
+        ElMessage.warning('检测履历加载失败')
+      }
+    } else {
+      vehicle.value = null
+      errorMessage.value = getErrorMessageByCode(resp.code, resp.message || '查询失败，请稍后重试')
+    }
+  } catch (err: any) {
     vehicle.value = null
-    notFound.value = true
+    if (err?.response?.data) {
+      const errData = err.response.data
+      errorMessage.value = getErrorMessageByCode(errData.code, errData.message || '查询失败，请稍后重试')
+    } else if (err?.message?.includes('timeout')) {
+      errorMessage.value = '请求超时，请检查网络后重试'
+    } else {
+      errorMessage.value = '网络异常，请稍后重试'
+    }
   } finally {
     loading.value = false
   }

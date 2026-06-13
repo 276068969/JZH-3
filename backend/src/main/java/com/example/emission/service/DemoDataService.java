@@ -1,6 +1,8 @@
 package com.example.emission.service;
 
+import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
+import com.example.emission.dto.ErrorCode;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.AuditRecord;
@@ -65,13 +67,117 @@ public class DemoDataService {
   }
 
   public Optional<Vehicle> searchVehicle(String keyword) {
-    String normalized = keyword == null ? "" : keyword.trim().toUpperCase();
+    String normalized = normalizeKeyword(keyword);
+    if (normalized.isEmpty()) {
+      return Optional.empty();
+    }
     return vehicles.stream()
         .filter(vehicle -> vehicle.plateNumber().equalsIgnoreCase(normalized)
             || vehicle.vin().equalsIgnoreCase(normalized)
             || inspections.stream().anyMatch(record -> record.getInspectionNo().equalsIgnoreCase(normalized)
-                && record.getPlateNumber().equals(vehicle.plateNumber())))
+                && record.getPlateNumber().equalsIgnoreCase(vehicle.plateNumber())))
         .findFirst();
+  }
+
+  private String normalizeKeyword(String keyword) {
+    if (keyword == null) {
+      return "";
+    }
+    String trimmed = keyword.trim()
+        .replaceAll("\\s+", "")
+        .replaceAll("　", "")
+        .replaceAll("\u00A0", "")
+        .replaceAll("\\u200B", "")
+        .replaceAll("\\uFEFF", "");
+    if (trimmed.isEmpty()) {
+      return "";
+    }
+    return trimmed.toUpperCase();
+  }
+
+  private String detectKeywordType(String normalized) {
+    if (normalized.isEmpty()) {
+      return "UNKNOWN";
+    }
+    if (normalized.startsWith("JC") && normalized.length() >= 8) {
+      return "INSPECTION_NO";
+    }
+    if (normalized.length() == 17 && normalized.matches("^[A-HJ-NPR-Z0-9]+$")) {
+      return "VIN";
+    }
+    if (normalized.length() >= 6 && normalized.length() <= 9) {
+      return "PLATE_NUMBER";
+    }
+    return "UNKNOWN";
+  }
+
+  public ApiResponse<Vehicle> searchVehicleWithValidation(String keyword) {
+    String normalized = normalizeKeyword(keyword);
+
+    if (normalized.isEmpty()) {
+      return ApiResponse.error(ErrorCode.EMPTY_KEYWORD.getCode(), ErrorCode.EMPTY_KEYWORD.getMessage());
+    }
+
+    if (normalized.length() < 2) {
+      return ApiResponse.error(ErrorCode.KEYWORD_TOO_SHORT.getCode(), ErrorCode.KEYWORD_TOO_SHORT.getMessage());
+    }
+
+    if (normalized.length() > 30) {
+      return ApiResponse.error(ErrorCode.KEYWORD_TOO_LONG.getCode(), ErrorCode.KEYWORD_TOO_LONG.getMessage());
+    }
+
+    String keywordType = detectKeywordType(normalized);
+
+    Optional<Vehicle> vehicleByPlate = vehicles.stream()
+        .filter(vehicle -> vehicle.plateNumber().equalsIgnoreCase(normalized))
+        .findFirst();
+    if (vehicleByPlate.isPresent()) {
+      return ApiResponse.success("通过车牌号查询成功", vehicleByPlate.get());
+    }
+
+    Optional<Vehicle> vehicleByVin = vehicles.stream()
+        .filter(vehicle -> vehicle.vin().equalsIgnoreCase(normalized))
+        .findFirst();
+    if (vehicleByVin.isPresent()) {
+      return ApiResponse.success("通过 VIN 查询成功", vehicleByVin.get());
+    }
+
+    Optional<InspectionRecord> inspectionRecord = inspections.stream()
+        .filter(record -> record.getInspectionNo().equalsIgnoreCase(normalized))
+        .findFirst();
+    if (inspectionRecord.isPresent()) {
+      String plateNumber = inspectionRecord.get().getPlateNumber();
+      Optional<Vehicle> vehicleByInspection = vehicles.stream()
+          .filter(vehicle -> vehicle.plateNumber().equalsIgnoreCase(plateNumber))
+          .findFirst();
+      if (vehicleByInspection.isPresent()) {
+        return ApiResponse.success("通过检测报告编号关联查询成功，关联车牌号：" + plateNumber, vehicleByInspection.get());
+      } else {
+        return ApiResponse.error(ErrorCode.VEHICLE_NOT_FOUND_BY_INSPECTION.getCode(),
+            "检测报告编号「" + normalized + "」存在，但未找到关联车辆「" + plateNumber + "」的信息");
+      }
+    }
+
+    String notFoundMessage;
+    String errorCode;
+    switch (keywordType) {
+      case "PLATE_NUMBER":
+        errorCode = ErrorCode.PLATE_NOT_FOUND.getCode();
+        notFoundMessage = "未找到车牌号「" + normalized + "」对应的车辆，请核对车牌号是否正确后重试";
+        break;
+      case "VIN":
+        errorCode = ErrorCode.VIN_NOT_FOUND.getCode();
+        notFoundMessage = "未找到 VIN「" + normalized + "」对应的车辆，请核对车辆识别代号是否正确后重试";
+        break;
+      case "INSPECTION_NO":
+        errorCode = ErrorCode.INSPECTION_NOT_FOUND.getCode();
+        notFoundMessage = "未找到检测报告编号「" + normalized + "」对应的记录，请核对报告编号是否正确后重试";
+        break;
+      default:
+        errorCode = ErrorCode.VEHICLE_NOT_FOUND.getCode();
+        notFoundMessage = "未找到匹配的车辆或检测记录，请检查输入是否正确。支持输入车牌号（如京A12345）、17位VIN码或检测报告编号（如JC20260611001）进行查询";
+    }
+    return ApiResponse.error(errorCode, notFoundMessage);
   }
 
   public List<InspectionRecord> inspections(String plateNumber) {

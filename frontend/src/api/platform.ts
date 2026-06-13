@@ -1,5 +1,12 @@
 import { http } from './http'
 
+export interface ApiResponse<T> {
+  success: boolean
+  code: string
+  message: string
+  data: T
+}
+
 export interface Vehicle {
   plateNumber: string
   vin: string
@@ -71,7 +78,7 @@ export const login = (username: string, password: string) =>
 export const fetchDashboard = () => http.get('/dashboard')
 
 export const searchVehicle = (keyword: string) =>
-  http.get<Vehicle>('/vehicles/search', { params: { keyword } })
+  http.get<ApiResponse<Vehicle>>('/vehicles/search', { params: { keyword } })
 
 export const fetchInspections = (plateNumber?: string) =>
   http.get<InspectionRecord[]>('/inspections', { params: { plateNumber } })
