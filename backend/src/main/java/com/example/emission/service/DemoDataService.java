@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,14 +38,42 @@ public class DemoDataService {
 
   private static final Logger log = LoggerFactory.getLogger(DemoDataService.class);
 
-  private final AnnouncementMapper announcementMapper;
+  private static final String CREATE_ANNOUNCEMENT_TABLE_SQL =
+      "CREATE TABLE IF NOT EXISTS announcements ("
+          + "id BIGINT PRIMARY KEY AUTO_INCREMENT, "
+          + "title VARCHAR(255) NOT NULL COMMENT '公告标题', "
+          + "content TEXT COMMENT '公告内容', "
+          + "type VARCHAR(32) COMMENT '公告类型：政策公告、通知公告等', "
+          + "publish_status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '发布状态：草稿、已发布、已下线', "
+          + "publisher VARCHAR(64) COMMENT '发布人/发布单位', "
+          + "publish_time DATETIME COMMENT '发布时间', "
+          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "
+          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间', "
+          + "INDEX idx_publish_status (publish_status), "
+          + "INDEX idx_type (type), "
+          + "INDEX idx_publish_time (publish_time)"
+          + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
-  public DemoDataService(AnnouncementMapper announcementMapper) {
+  private final AnnouncementMapper announcementMapper;
+  private final JdbcTemplate jdbcTemplate;
+
+  public DemoDataService(AnnouncementMapper announcementMapper, JdbcTemplate jdbcTemplate) {
     this.announcementMapper = announcementMapper;
+    this.jdbcTemplate = jdbcTemplate;
+  }
+
+  private void ensureAnnouncementTableExists() {
+    try {
+      jdbcTemplate.execute(CREATE_ANNOUNCEMENT_TABLE_SQL);
+      log.info("公告表检查/创建完成");
+    } catch (Exception e) {
+      log.warn("公告表创建/检查失败：{}", e.getMessage());
+    }
   }
 
   @PostConstruct
   public void initAnnouncementData() {
+    ensureAnnouncementTableExists();
     try {
       Long count = announcementMapper.selectCount(null);
       if (count == null || count == 0) {
@@ -355,6 +384,7 @@ public class DemoDataService {
   }
 
   public synchronized Map<String, Object> createAnnouncement(Announcement announcement, String operator) {
+    ensureAnnouncementTableExists();
     try {
       String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
@@ -387,6 +417,7 @@ public class DemoDataService {
   }
 
   public synchronized Map<String, Object> updateAnnouncement(Announcement announcement, String operator) {
+    ensureAnnouncementTableExists();
     try {
       Announcement existing = announcementMapper.selectById(announcement.getId());
       if (existing == null) {
@@ -434,6 +465,7 @@ public class DemoDataService {
   }
 
   public synchronized Map<String, Object> deleteAnnouncement(Long id) {
+    ensureAnnouncementTableExists();
     try {
       int rows = announcementMapper.deleteById(id);
       if (rows > 0) {
@@ -448,6 +480,7 @@ public class DemoDataService {
   }
 
   public synchronized Map<String, Object> publishAnnouncement(Long id, String operator) {
+    ensureAnnouncementTableExists();
     try {
       Announcement announcement = announcementMapper.selectById(id);
       if (announcement == null) {
@@ -479,6 +512,7 @@ public class DemoDataService {
   }
 
   public synchronized Map<String, Object> offlineAnnouncement(Long id, String operator) {
+    ensureAnnouncementTableExists();
     try {
       Announcement announcement = announcementMapper.selectById(id);
       if (announcement == null) {
