@@ -32,8 +32,8 @@ public class PlatformController {
   }
 
   @GetMapping("/dashboard")
-  public Map<String, Object> dashboard() {
-    return demoDataService.dashboard();
+  public Map<String, Object> dashboard(@RequestParam(required = false, defaultValue = "7") Integer days) {
+    return demoDataService.dashboard(days);
   }
 
   @GetMapping("/vehicles/search")

@@ -20,7 +20,14 @@
           <h1>数据看板</h1>
           <p class="muted">{{ auth.user?.displayName }} · {{ auth.user?.role }}</p>
         </div>
-        <el-button @click="logout">退出</el-button>
+        <div class="header-actions">
+          <el-radio-group v-model="timeRange" size="default" @change="onTimeRangeChange">
+            <el-radio-button :label="7">近 7 日</el-radio-button>
+            <el-radio-button :label="14">近 14 日</el-radio-button>
+            <el-radio-button :label="30">近 30 日</el-radio-button>
+          </el-radio-group>
+          <el-button style="margin-left: 12px" @click="logout">退出</el-button>
+        </div>
       </header>
 
       <div class="grid grid-4">
@@ -33,7 +40,9 @@
       <section class="section admin-section">
         <div class="grid grid-3">
           <div class="card chart-panel">
-            <h2>近 7 日检测趋势</h2>
+            <div class="section-header">
+              <h2>近 {{ timeRange }} 日检测趋势</h2>
+            </div>
             <div ref="trendChart" class="chart"></div>
           </div>
           <div class="card chart-panel">
@@ -229,6 +238,9 @@ const trendChart = ref<HTMLElement | null>(null)
 const standardChart = ref<HTMLElement | null>(null)
 const statusFilter = ref('all')
 const warningFilter = ref('all')
+const timeRange = ref<number>(7)
+let trendChartInstance: echarts.ECharts | null = null
+let standardChartInstance: echarts.ECharts | null = null
 
 const auditDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
@@ -238,13 +250,16 @@ const auditOpinion = ref('')
 const auditLoading = ref(false)
 const auditHistory = ref<AuditRecord[]>([])
 
-const metrics = computed(() => [
-  { label: '今日检测车辆数', value: dashboard.value.todayInspections ?? 0 },
-  { label: '合格车辆数', value: dashboard.value.passedVehicles ?? 0 },
-  { label: '不合格车辆数', value: dashboard.value.failedVehicles ?? 0 },
-  { label: '待审核数量', value: dashboard.value.pendingAudit ?? 0, highlight: true },
-  { label: '超标率', value: `${dashboard.value.exceedRate ?? 0}%` }
-])
+const metrics = computed(() => {
+  const periodLabel = `近${timeRange.value}日`
+  return [
+    { label: `${periodLabel}检测车辆数`, value: dashboard.value.totalInspections ?? 0 },
+    { label: `${periodLabel}合格车辆数`, value: dashboard.value.passedVehicles ?? 0 },
+    { label: `${periodLabel}不合格车辆数`, value: dashboard.value.failedVehicles ?? 0 },
+    { label: '待审核数量', value: dashboard.value.pendingAudit ?? 0, highlight: true },
+    { label: `${periodLabel}超标率`, value: `${dashboard.value.exceedRate ?? 0}%` }
+  ]
+})
 
 const filteredRecords = computed(() => {
   if (statusFilter.value === 'all') return records.value
@@ -294,7 +309,7 @@ const logout = async () => {
 
 const loadData = async () => {
   const [dashboardResp, recordResp, warningResp] = await Promise.all([
-    fetchDashboard(),
+    fetchDashboard(timeRange.value),
     fetchInspections(),
     fetchWarnings()
   ])
@@ -302,6 +317,12 @@ const loadData = async () => {
   allRecords.value = recordResp.data
   records.value = recordResp.data
   warnings.value = warningResp.data
+  await renderCharts()
+}
+
+const onTimeRangeChange = async () => {
+  const dashboardResp = await fetchDashboard(timeRange.value)
+  dashboard.value = dashboardResp.data
   await renderCharts()
 }
 
@@ -320,17 +341,46 @@ const filterRecords = () => {
 const renderCharts = async () => {
   await nextTick()
   if (trendChart.value) {
-    echarts.init(trendChart.value).setOption({
-      tooltip: {},
-      xAxis: { type: 'category', data: dashboard.value.trend?.map((item: any) => item.date) || [] },
+    if (trendChartInstance) {
+      trendChartInstance.dispose()
+    }
+    trendChartInstance = echarts.init(trendChart.value)
+    trendChartInstance.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 40, right: 20, top: 30, bottom: 40 },
+      xAxis: {
+        type: 'category',
+        data: dashboard.value.trend?.map((item: any) => item.date) || [],
+        axisLabel: {
+          rotate: timeRange.value > 14 ? 45 : 0,
+          fontSize: 11
+        }
+      },
       yAxis: { type: 'value' },
-      series: [{ type: 'line', smooth: true, data: dashboard.value.trend?.map((item: any) => item.count) || [] }]
+      series: [{
+        type: 'line',
+        smooth: true,
+        data: dashboard.value.trend?.map((item: any) => item.count) || [],
+        areaStyle: { opacity: 0.15 },
+        lineStyle: { width: 2 },
+        itemStyle: { color: '#409EFF' }
+      }]
     })
   }
   if (standardChart.value) {
-    echarts.init(standardChart.value).setOption({
+    if (standardChartInstance) {
+      standardChartInstance.dispose()
+    }
+    standardChartInstance = echarts.init(standardChart.value)
+    standardChartInstance.setOption({
       tooltip: { trigger: 'item' },
-      series: [{ type: 'pie', radius: ['45%', '72%'], data: dashboard.value.emissionStandards || [] }]
+      legend: { bottom: 0 },
+      series: [{
+        type: 'pie',
+        radius: ['45%', '72%'],
+        data: dashboard.value.emissionStandards || [],
+        label: { formatter: '{b}: {d}%' }
+      }]
     })
   }
 }
@@ -417,6 +467,11 @@ onMounted(async () => {
   margin-bottom: 18px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .admin-header h1,
 .admin-header p,
 .chart-panel h2 {
@@ -465,8 +520,14 @@ onMounted(async () => {
 
 .grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 960px) {

@@ -226,27 +226,36 @@ public class DemoDataService {
 
   private final AtomicLong warningIdGenerator = new AtomicLong(5);
 
-  public Map<String, Object> dashboard() {
+  public Map<String, Object> dashboard(Integer days) {
+    if (days == null || days <= 0) {
+      days = 7;
+    }
+
     long pendingCount = inspections.stream()
         .filter(r -> "待审核".equals(r.getReportStatus()))
         .count();
 
+    List<Map<String, Object>> trend = new ArrayList<>();
+    for (int i = days - 1; i >= 0; i--) {
+      LocalDate date = LocalDate.now().minusDays(i);
+      int baseCount = 90 + (int) (Math.sin(i * 0.8) * 20) + (days > 14 ? (int) (Math.random() * 30) : 0);
+      trend.add(Map.of("date", date.toString(), "count", baseCount));
+    }
+
+    int totalInspections = trend.stream().mapToInt(item -> (int) item.get("count")).sum();
+    int failedVehicles = (int) (totalInspections * 0.11);
+    int passedVehicles = totalInspections - failedVehicles;
+    double exceedRate = Math.round(failedVehicles * 1000.0 / totalInspections) / 10.0;
+
     return Map.of(
-        "todayInspections", 126,
-        "passedVehicles", 112,
-        "failedVehicles", 14,
-        "exceedRate", 11.1,
+        "days", days,
+        "totalInspections", totalInspections,
+        "passedVehicles", passedVehicles,
+        "failedVehicles", failedVehicles,
+        "exceedRate", exceedRate,
         "pendingAudit", pendingCount,
         "stationCount", stations().size(),
-        "trend", List.of(
-            Map.of("date", LocalDate.now().minusDays(6).toString(), "count", 91),
-            Map.of("date", LocalDate.now().minusDays(5).toString(), "count", 105),
-            Map.of("date", LocalDate.now().minusDays(4).toString(), "count", 98),
-            Map.of("date", LocalDate.now().minusDays(3).toString(), "count", 121),
-            Map.of("date", LocalDate.now().minusDays(2).toString(), "count", 117),
-            Map.of("date", LocalDate.now().minusDays(1).toString(), "count", 132),
-            Map.of("date", LocalDate.now().toString(), "count", 126)
-        ),
+        "trend", trend,
         "emissionStandards", List.of(
             Map.of("name", "国六", "value", 54),
             Map.of("name", "国五", "value", 32),

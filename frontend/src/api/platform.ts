@@ -91,7 +91,7 @@ export interface WarningHandleRequest {
 export const login = (username: string, password: string) =>
   http.post('/auth/login', { username, password })
 
-export const fetchDashboard = () => http.get('/dashboard')
+export const fetchDashboard = (days?: number) => http.get('/dashboard', { params: days ? { days } : {} })
 
 export const searchVehicle = (keyword: string) =>
   http.get<ApiResponse<Vehicle>>('/vehicles/search', { params: { keyword } })
