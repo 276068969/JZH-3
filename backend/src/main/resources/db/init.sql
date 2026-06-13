@@ -49,3 +49,18 @@ CREATE TABLE IF NOT EXISTS audit_records (
   audit_time DATETIME NOT NULL,
   INDEX idx_inspection_no (inspection_no)
 );
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL COMMENT '公告标题',
+  content TEXT COMMENT '公告内容',
+  type VARCHAR(32) COMMENT '公告类型：政策公告、通知公告等',
+  publish_status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '发布状态：草稿、已发布、已下线',
+  publisher VARCHAR(64) COMMENT '发布人/发布单位',
+  publish_time DATETIME COMMENT '发布时间',
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX idx_publish_status (publish_status),
+  INDEX idx_type (type),
+  INDEX idx_publish_time (publish_time)
+);

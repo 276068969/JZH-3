@@ -209,11 +209,247 @@ public class DemoDataService {
     );
   }
 
+  private final List<Announcement> announcements = new ArrayList<>(List.of(
+      createAnnouncement(1L, "关于加强重型柴油车尾气监管的通知",
+          "为进一步加强本市重型柴油车尾气排放监管，改善环境空气质量，根据《中华人民共和国大气污染防治法》等相关法律法规，现将有关事项通知如下：一、严格落实重型柴油车排放检验制度；二、加强路检路查和遥感监测；三、推进黑烟车电子抓拍系统建设；四、强化排放检测机构监管。",
+          "政策公告", "已发布", "市生态环境局", "2026-06-10 09:30:00", "2026-06-08 14:20:00", "2026-06-10 09:30:00"),
+      createAnnouncement(2L, "机动车环保定期检测服务时间调整",
+          "为更好地服务广大车主，提高检测效率，自2026年6月15日起，各机动车环保检测站服务时间调整如下：工作日：8:00-18:00；周六：9:00-17:00；周日及法定节假日休息。请车主朋友们合理安排检测时间。",
+          "通知公告", "已发布", "市机动车检测中心", "2026-06-02 14:00:00", "2026-06-01 10:30:00", "2026-06-02 14:00:00"),
+      createAnnouncement(3L, "国六排放标准车辆登记资料核验提醒",
+          "根据国家有关规定，自2026年7月1日起，所有新注册登记的轻型汽车须符合国六b排放标准。请广大车主在办理车辆注册登记前，提前准备好相关资料，确保车辆符合排放标准要求。",
+          "通知公告", "已发布", "市车管所", "2026-05-28 10:15:00", "2026-05-27 16:40:00", "2026-05-28 10:15:00"),
+      createAnnouncement(4L, "关于开展机动车排放检测机构专项检查的通知",
+          "为规范机动车排放检测行为，提高检测数据质量，市生态环境局决定开展全市机动车排放检测机构专项检查工作。检查时间：2026年6月15日至7月15日；检查范围：全市所有机动车环保检测站；检查内容：检测设备运行情况、检测流程规范性、检测数据真实性等。",
+          "政策公告", "草稿", "市生态环境局", null, "2026-06-08 11:00:00", "2026-06-09 15:30:00"),
+      createAnnouncement(5L, "新能源汽车环保优惠政策解读",
+          "为鼓励市民购买和使用新能源汽车，我市出台了一系列环保优惠政策，包括：一、新能源汽车免征车船税；二、新能源汽车不受尾号限行限制；三、新能源汽车停车费减免；四、充电基础设施建设补贴。",
+          "政策公告", "已发布", "市发改委", "2026-05-20 09:00:00", "2026-05-18 14:20:00", "2026-05-20 09:00:00"),
+      createAnnouncement(6L, "机动车尾气超标治理维修单位名录更新",
+          "根据《机动车排气污染防治条例》要求，现将本市机动车尾气超标治理维修单位名录（2026年第二季度）予以公布。车主可选择名录中的维修单位进行超标治理，治理合格后方可进行复检。",
+          "通知公告", "已发布", "市交通运输委", "2026-05-15 16:30:00", "2026-05-14 10:00:00", "2026-05-15 16:30:00"),
+      createAnnouncement(7L, "关于机动车环保检验合格标志电子化的通知",
+          "为深化'放管服'改革，提升便民服务水平，自2026年7月1日起，我市全面推行机动车环保检验合格标志电子化。电子标志与纸质标志具有同等法律效力，车主无需再粘贴纸质标志。",
+          "政策公告", "已下线", "市生态环境局", "2026-04-10 08:30:00", "2026-04-08 09:00:00", "2026-05-25 17:00:00")
+  ));
+
+  private final AtomicLong announcementIdGenerator = new AtomicLong(8);
+
+  private Announcement createAnnouncement(Long id, String title, String content, String type,
+                                          String publishStatus, String publisher, String publishTime,
+                                          String createTime, String updateTime) {
+    return new Announcement(id, title, content, type, publishStatus, publisher, publishTime, createTime, updateTime);
+  }
+
   public List<Announcement> announcements() {
-    return List.of(
-        new Announcement(1, "关于加强重型柴油车尾气监管的通知", "2026-06-10"),
-        new Announcement(2, "机动车环保定期检测服务时间调整", "2026-06-02"),
-        new Announcement(3, "国六排放标准车辆登记资料核验提醒", "2026-05-28")
+    return announcements.stream()
+        .filter(a -> "已发布".equals(a.getPublishStatus()))
+        .sorted((a, b) -> {
+          String timeA = a.getPublishTime() != null ? a.getPublishTime() : a.getCreateTime();
+          String timeB = b.getPublishTime() != null ? b.getPublishTime() : b.getCreateTime();
+          return timeB.compareTo(timeA);
+        })
+        .collect(Collectors.toList());
+  }
+
+  public Map<String, Object> getAnnouncementList(Integer page, Integer pageSize,
+                                                   String title, String type,
+                                                   String publishStatus, String publisher,
+                                                   String startTime, String endTime) {
+    int current = page != null && page > 0 ? page : 1;
+    int size = pageSize != null && pageSize > 0 ? pageSize : 10;
+
+    List<Announcement> filtered = announcements.stream()
+        .filter(a -> {
+          if (title != null && !title.isBlank()) {
+            return a.getTitle() != null && a.getTitle().contains(title.trim());
+          }
+          return true;
+        })
+        .filter(a -> {
+          if (type != null && !type.isBlank()) {
+            return type.equals(a.getType());
+          }
+          return true;
+        })
+        .filter(a -> {
+          if (publishStatus != null && !publishStatus.isBlank()) {
+            return publishStatus.equals(a.getPublishStatus());
+          }
+          return true;
+        })
+        .filter(a -> {
+          if (publisher != null && !publisher.isBlank()) {
+            return a.getPublisher() != null && a.getPublisher().contains(publisher.trim());
+          }
+          return true;
+        })
+        .filter(a -> {
+          if (startTime != null && !startTime.isBlank()) {
+            String time = a.getPublishTime() != null ? a.getPublishTime() : a.getCreateTime();
+            return time != null && time.compareTo(startTime) >= 0;
+          }
+          return true;
+        })
+        .filter(a -> {
+          if (endTime != null && !endTime.isBlank()) {
+            String time = a.getPublishTime() != null ? a.getPublishTime() : a.getCreateTime();
+            return time != null && time.compareTo(endTime + " 23:59:59") <= 0;
+          }
+          return true;
+        })
+        .sorted((a, b) -> {
+          String timeA = a.getUpdateTime() != null ? a.getUpdateTime() : a.getCreateTime();
+          String timeB = b.getUpdateTime() != null ? b.getUpdateTime() : b.getCreateTime();
+          return timeB.compareTo(timeA);
+        })
+        .collect(Collectors.toList());
+
+    int total = filtered.size();
+    int fromIndex = (current - 1) * size;
+    int toIndex = Math.min(fromIndex + size, total);
+
+    List<Announcement> records = fromIndex < total
+        ? filtered.subList(fromIndex, toIndex)
+        : List.of();
+
+    return Map.of(
+        "total", total,
+        "page", current,
+        "pageSize", size,
+        "records", records
+    );
+  }
+
+  public Optional<Announcement> getAnnouncementById(Long id) {
+    return announcements.stream()
+        .filter(a -> a.getId().equals(id))
+        .findFirst();
+  }
+
+  public synchronized Map<String, Object> createAnnouncement(Announcement announcement, String operator) {
+    String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    Long id = announcementIdGenerator.getAndIncrement();
+
+    announcement.setId(id);
+    announcement.setCreateTime(now);
+    announcement.setUpdateTime(now);
+    if (announcement.getPublisher() == null || announcement.getPublisher().isBlank()) {
+      announcement.setPublisher(operator);
+    }
+    if (announcement.getPublishStatus() == null || announcement.getPublishStatus().isBlank()) {
+      announcement.setPublishStatus("草稿");
+    }
+    if ("已发布".equals(announcement.getPublishStatus()) && announcement.getPublishTime() == null) {
+      announcement.setPublishTime(now);
+    }
+
+    announcements.add(announcement);
+
+    return Map.of(
+        "success", true,
+        "message", "公告创建成功",
+        "record", announcement
+    );
+  }
+
+  public synchronized Map<String, Object> updateAnnouncement(Announcement announcement, String operator) {
+    Optional<Announcement> existingOpt = announcements.stream()
+        .filter(a -> a.getId().equals(announcement.getId()))
+        .findFirst();
+
+    if (existingOpt.isEmpty()) {
+      return Map.of("success", false, "message", "公告不存在");
+    }
+
+    Announcement existing = existingOpt.get();
+    String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+    if (announcement.getTitle() != null) {
+      existing.setTitle(announcement.getTitle());
+    }
+    if (announcement.getContent() != null) {
+      existing.setContent(announcement.getContent());
+    }
+    if (announcement.getType() != null) {
+      existing.setType(announcement.getType());
+    }
+    if (announcement.getPublishStatus() != null) {
+      String oldStatus = existing.getPublishStatus();
+      String newStatus = announcement.getPublishStatus();
+      existing.setPublishStatus(newStatus);
+      if ("已发布".equals(newStatus) && !"已发布".equals(oldStatus) && existing.getPublishTime() == null) {
+        existing.setPublishTime(now);
+      }
+    }
+    if (announcement.getPublisher() != null) {
+      existing.setPublisher(announcement.getPublisher());
+    }
+    existing.setUpdateTime(now);
+
+    return Map.of(
+        "success", true,
+        "message", "公告更新成功",
+        "record", existing
+    );
+  }
+
+  public synchronized Map<String, Object> deleteAnnouncement(Long id) {
+    boolean removed = announcements.removeIf(a -> a.getId().equals(id));
+    if (!removed) {
+      return Map.of("success", false, "message", "公告不存在");
+    }
+    return Map.of("success", true, "message", "公告删除成功");
+  }
+
+  public synchronized Map<String, Object> publishAnnouncement(Long id, String operator) {
+    Optional<Announcement> existingOpt = announcements.stream()
+        .filter(a -> a.getId().equals(id))
+        .findFirst();
+
+    if (existingOpt.isEmpty()) {
+      return Map.of("success", false, "message", "公告不存在");
+    }
+
+    Announcement announcement = existingOpt.get();
+    if ("已发布".equals(announcement.getPublishStatus())) {
+      return Map.of("success", false, "message", "公告已发布，无需重复发布");
+    }
+
+    String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    announcement.setPublishStatus("已发布");
+    announcement.setPublishTime(now);
+    announcement.setUpdateTime(now);
+
+    return Map.of(
+        "success", true,
+        "message", "公告发布成功",
+        "record", announcement
+    );
+  }
+
+  public synchronized Map<String, Object> offlineAnnouncement(Long id, String operator) {
+    Optional<Announcement> existingOpt = announcements.stream()
+        .filter(a -> a.getId().equals(id))
+        .findFirst();
+
+    if (existingOpt.isEmpty()) {
+      return Map.of("success", false, "message", "公告不存在");
+    }
+
+    Announcement announcement = existingOpt.get();
+    if (!"已发布".equals(announcement.getPublishStatus())) {
+      return Map.of("success", false, "message", "公告未发布，无法下线");
+    }
+
+    String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    announcement.setPublishStatus("已下线");
+    announcement.setUpdateTime(now);
+
+    return Map.of(
+        "success", true,
+        "message", "公告下线成功",
+        "record", announcement
     );
   }
 

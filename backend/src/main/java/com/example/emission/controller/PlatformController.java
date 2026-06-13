@@ -79,6 +79,55 @@ public class PlatformController {
     return demoDataService.announcements();
   }
 
+  @GetMapping("/announcements/list")
+  public Map<String, Object> announcementList(
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer pageSize,
+      @RequestParam(required = false) String title,
+      @RequestParam(required = false) String type,
+      @RequestParam(required = false) String publishStatus,
+      @RequestParam(required = false) String publisher,
+      @RequestParam(required = false) String startTime,
+      @RequestParam(required = false) String endTime) {
+    return demoDataService.getAnnouncementList(page, pageSize, title, type, publishStatus, publisher, startTime, endTime);
+  }
+
+  @GetMapping("/announcements/detail")
+  public ResponseEntity<Announcement> announcementDetail(@RequestParam Long id) {
+    return demoDataService.getAnnouncementById(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @PostMapping("/announcements/create")
+  public Map<String, Object> createAnnouncement(@RequestBody Announcement announcement, Authentication authentication) {
+    String operator = authentication != null ? authentication.getName() : "system";
+    return demoDataService.createAnnouncement(announcement, operator);
+  }
+
+  @PostMapping("/announcements/update")
+  public Map<String, Object> updateAnnouncement(@RequestBody Announcement announcement, Authentication authentication) {
+    String operator = authentication != null ? authentication.getName() : "system";
+    return demoDataService.updateAnnouncement(announcement, operator);
+  }
+
+  @PostMapping("/announcements/delete")
+  public Map<String, Object> deleteAnnouncement(@RequestParam Long id) {
+    return demoDataService.deleteAnnouncement(id);
+  }
+
+  @PostMapping("/announcements/publish")
+  public Map<String, Object> publishAnnouncement(@RequestParam Long id, Authentication authentication) {
+    String operator = authentication != null ? authentication.getName() : "system";
+    return demoDataService.publishAnnouncement(id, operator);
+  }
+
+  @PostMapping("/announcements/offline")
+  public Map<String, Object> offlineAnnouncement(@RequestParam Long id, Authentication authentication) {
+    String operator = authentication != null ? authentication.getName() : "system";
+    return demoDataService.offlineAnnouncement(id, operator);
+  }
+
   @GetMapping("/warnings")
   public List<WarningRecord> warnings() {
     return demoDataService.warnings();
