@@ -76,6 +76,9 @@ export const searchVehicle = (keyword: string) =>
 export const fetchInspections = (plateNumber?: string) =>
   http.get<InspectionRecord[]>('/inspections', { params: { plateNumber } })
 
+export const fetchInspectionDetail = (inspectionNo: string) =>
+  http.get<InspectionRecord>('/inspections/detail', { params: { inspectionNo } })
+
 export const fetchStations = () => http.get<Station[]>('/stations')
 
 export const fetchAnnouncements = () => http.get<Announcement[]>('/announcements')

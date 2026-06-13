@@ -52,6 +52,13 @@ public class PlatformController {
     return demoDataService.audit(request, auditor);
   }
 
+  @GetMapping("/inspections/detail")
+  public ResponseEntity<InspectionRecord> inspectionDetail(@RequestParam String inspectionNo) {
+    return demoDataService.getInspectionDetail(inspectionNo)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
   @GetMapping("/inspections/audit-records")
   public List<AuditRecord> auditRecords(@RequestParam String inspectionNo) {
     return demoDataService.getAuditRecords(inspectionNo);

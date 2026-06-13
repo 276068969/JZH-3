@@ -236,6 +236,12 @@ public class DemoDataService {
     );
   }
 
+  public Optional<InspectionRecord> getInspectionDetail(String inspectionNo) {
+    return inspections.stream()
+        .filter(r -> r.getInspectionNo().equalsIgnoreCase(inspectionNo == null ? "" : inspectionNo.trim()))
+        .findFirst();
+  }
+
   public List<AuditRecord> getAuditRecords(String inspectionNo) {
     return auditRecords.stream()
         .filter(r -> r.inspectionNo().equals(inspectionNo))

@@ -102,6 +102,17 @@
             <el-table-column prop="auditor" label="审核人" width="100" />
             <el-table-column prop="auditTime" label="审核时间" min-width="160" />
             <el-table-column prop="auditOpinion" label="审核意见" min-width="180" />
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  type="primary"
+                  link
+                  @click="viewReportDetail(row)"
+                >
+                  查看详情
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </div>
@@ -171,6 +182,10 @@ const getStatusType = (status: string) => {
 }
 
 const scrollToStations = () => stationSection.value?.scrollIntoView({ behavior: 'smooth' })
+
+const viewReportDetail = (row: InspectionRecord) => {
+  router.push({ name: 'report-detail', params: { inspectionNo: row.inspectionNo } })
+}
 
 onMounted(async () => {
   const [stationResp, announcementResp] = await Promise.all([fetchStations(), fetchAnnouncements()])
