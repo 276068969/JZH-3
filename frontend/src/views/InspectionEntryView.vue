@@ -35,6 +35,7 @@
                 maxlength="10"
                 clearable
                 style="text-transform: uppercase"
+                @blur="onPlateNumberBlur"
               />
             </el-form-item>
 
@@ -70,6 +71,18 @@
             </el-form-item>
           </el-form>
 
+          <el-alert
+            v-if="vehicleInfo"
+            :title="`车辆信息：${vehicleInfo.fuelType} / ${vehicleInfo.emissionStandard}"
+            type="info"
+            :closable="false"
+            style="margin: 0 0 16px"
+          >
+            <template #default>
+              车辆类型：{{ vehicleInfo.vehicleType }} · 车主：{{ vehicleInfo.owner }}
+            </template>
+          </el-alert>
+
           <div class="section-header" style="margin-top: 24px">
             <h2>尾气检测数据</h2>
             <el-tag :type="computedResult === '合格' ? 'success' : 'danger'" effect="dark">
@@ -89,14 +102,14 @@
                 controls-position="right"
               />
               <div class="hint">
-                限值：≤ 0.3%
+                限值：≤ {{ currentLimits.co }}%
                 <el-tag
                   v-if="form.coValue > 0"
-                  :type="form.coValue <= 0.3 ? 'success' : 'danger'"
+                  :type="form.coValue <= currentLimits.co ? 'success' : 'danger'"
                   size="small"
                   style="margin-left: 8px"
                 >
-                  {{ form.coValue <= 0.3 ? '合格' : '超标' }}
+                  {{ form.coValue <= currentLimits.co ? '合格' : '超标' }}
                 </el-tag>
               </div>
             </el-form-item>
@@ -112,14 +125,14 @@
                 controls-position="right"
               />
               <div class="hint">
-                限值：≤ 30 ppm
+                限值：≤ {{ currentLimits.hc }} ppm
                 <el-tag
                   v-if="form.hcValue > 0"
-                  :type="form.hcValue <= 30 ? 'success' : 'danger'"
+                  :type="form.hcValue <= currentLimits.hc ? 'success' : 'danger'"
                   size="small"
                   style="margin-left: 8px"
                 >
-                  {{ form.hcValue <= 30 ? '合格' : '超标' }}
+                  {{ form.hcValue <= currentLimits.hc ? '合格' : '超标' }}
                 </el-tag>
               </div>
             </el-form-item>
@@ -135,14 +148,14 @@
                 controls-position="right"
               />
               <div class="hint">
-                限值：≤ 70 ppm
+                限值：≤ {{ currentLimits.nox }} ppm
                 <el-tag
                   v-if="form.noxValue > 0"
-                  :type="form.noxValue <= 70 ? 'success' : 'danger'"
+                  :type="form.noxValue <= currentLimits.nox ? 'success' : 'danger'"
                   size="small"
                   style="margin-left: 8px"
                 >
-                  {{ form.noxValue <= 70 ? '合格' : '超标' }}
+                  {{ form.noxValue <= currentLimits.nox ? '合格' : '超标' }}
                 </el-tag>
               </div>
             </el-form-item>
@@ -158,14 +171,14 @@
                 controls-position="right"
               />
               <div class="hint">
-                限值：≤ 0.25 m⁻¹
+                限值：≤ {{ currentLimits.opacity }} m⁻¹
                 <el-tag
                   v-if="form.opacityValue > 0"
-                  :type="form.opacityValue <= 0.25 ? 'success' : 'danger'"
+                  :type="form.opacityValue <= currentLimits.opacity ? 'success' : 'danger'"
                   size="small"
                   style="margin-left: 8px"
                 >
-                  {{ form.opacityValue <= 0.25 ? '合格' : '超标' }}
+                  {{ form.opacityValue <= currentLimits.opacity ? '合格' : '超标' }}
                 </el-tag>
               </div>
             </el-form-item>
@@ -189,6 +202,9 @@
                 {{ form.plateNumber || '-' }}
               </span>
             </el-descriptions-item>
+            <el-descriptions-item label="燃料/排放标准">
+              <el-tag size="small" effect="plain">{{ vehicleInfo ? `${vehicleInfo.fuelType} / ${vehicleInfo.emissionStandard}` : '-' }}</el-tag>
+            </el-descriptions-item>
             <el-descriptions-item label="检测站">
               {{ form.stationName || '-' }}
             </el-descriptions-item>
@@ -205,31 +221,35 @@
             <div class="data-grid">
               <div class="data-item">
                 <div class="data-label">CO 值</div>
-                <div class="data-value" :class="{ 'over-limit': form.coValue > 0.3 }">
+                <div class="data-value" :class="{ 'over-limit': form.coValue > currentLimits.co }">
                   {{ form.coValue.toFixed(2) }}
                   <span class="unit">%</span>
                 </div>
+                <div class="data-limit">限值：{{ currentLimits.co }}%</div>
               </div>
               <div class="data-item">
                 <div class="data-label">HC 值</div>
-                <div class="data-value" :class="{ 'over-limit': form.hcValue > 30 }">
+                <div class="data-value" :class="{ 'over-limit': form.hcValue > currentLimits.hc }">
                   {{ form.hcValue.toFixed(1) }}
                   <span class="unit">ppm</span>
                 </div>
+                <div class="data-limit">限值：{{ currentLimits.hc }} ppm</div>
               </div>
               <div class="data-item">
                 <div class="data-label">NOx 值</div>
-                <div class="data-value" :class="{ 'over-limit': form.noxValue > 70 }">
+                <div class="data-value" :class="{ 'over-limit': form.noxValue > currentLimits.nox }">
                   {{ form.noxValue.toFixed(1) }}
                   <span class="unit">ppm</span>
                 </div>
+                <div class="data-limit">限值：{{ currentLimits.nox }} ppm</div>
               </div>
               <div class="data-item">
                 <div class="data-label">烟度值</div>
-                <div class="data-value" :class="{ 'over-limit': form.opacityValue > 0.25 }">
+                <div class="data-value" :class="{ 'over-limit': form.opacityValue > currentLimits.opacity }">
                   {{ form.opacityValue.toFixed(2) }}
                   <span class="unit">m⁻¹</span>
                 </div>
+                <div class="data-limit">限值：{{ currentLimits.opacity }} m⁻¹</div>
               </div>
             </div>
           </div>
@@ -290,14 +310,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormRules } from 'element-plus'
 import {
   createInspection,
   fetchStations,
+  searchVehicle,
+  queryPollutantLimitRule,
   type CreateInspectionRequest,
-  type Station
+  type PollutantLimitRule,
+  type Station,
+  type Vehicle
 } from '@/api/platform'
 
 const router = useRouter()
@@ -309,6 +333,8 @@ const successDialogVisible = ref(false)
 const newRecordNo = ref('')
 const successMessage = ref('')
 
+const DEFAULT_LIMITS = { co: 0.3, hc: 30, nox: 70, opacity: 0.25 }
+
 const form = ref<CreateInspectionRequest>({
   plateNumber: '',
   stationName: '',
@@ -318,6 +344,10 @@ const form = ref<CreateInspectionRequest>({
   opacityValue: 0,
   inspector: ''
 })
+
+const vehicleInfo = ref<Vehicle | null>(null)
+const currentRule = ref<PollutantLimitRule | null>(null)
+const currentLimits = reactive({ ...DEFAULT_LIMITS })
 
 const plateNumberRules: FormRules = {
   plateNumber: [
@@ -340,10 +370,10 @@ const inspectorRules: FormRules = {
 }
 
 const computedResult = computed(() => {
-  const coPass = form.value.coValue <= 0.3
-  const hcPass = form.value.hcValue <= 30
-  const noxPass = form.value.noxValue <= 70
-  const opacityPass = form.value.opacityValue <= 0.25
+  const coPass = form.value.coValue <= currentLimits.co
+  const hcPass = form.value.hcValue <= currentLimits.hc
+  const noxPass = form.value.noxValue <= currentLimits.nox
+  const opacityPass = form.value.opacityValue <= currentLimits.opacity
 
   if (coPass && hcPass && noxPass && opacityPass) {
     return '合格'
@@ -370,6 +400,62 @@ const loadStations = async () => {
   }
 }
 
+const applyLimits = (rule: PollutantLimitRule | null) => {
+  if (rule) {
+    currentLimits.co = rule.coLimit
+    currentLimits.hc = rule.hcLimit
+    currentLimits.nox = rule.noxLimit
+    currentLimits.opacity = rule.opacityLimit
+  } else {
+    Object.assign(currentLimits, DEFAULT_LIMITS)
+  }
+}
+
+const loadVehicleAndRule = async (plateNumber: string) => {
+  if (!plateNumber.trim()) {
+    vehicleInfo.value = null
+    currentRule.value = null
+    applyLimits(null)
+    return
+  }
+  try {
+    const { data } = await searchVehicle(plateNumber.trim().toUpperCase())
+    if (data.success && data.data) {
+      vehicleInfo.value = data.data
+      try {
+        const ruleResp = await queryPollutantLimitRule(data.data.fuelType, data.data.emissionStandard)
+        currentRule.value = ruleResp.data
+        applyLimits(currentRule.value)
+        ElMessage.info(`已加载 ${data.data.fuelType} / ${data.data.emissionStandard} 限值规则`)
+      } catch {
+        currentRule.value = null
+        applyLimits(null)
+      }
+    } else {
+      vehicleInfo.value = null
+      currentRule.value = null
+      applyLimits(null)
+      ElMessage.warning('未找到车辆信息，将使用默认限值')
+    }
+  } catch {
+    vehicleInfo.value = null
+    currentRule.value = null
+    applyLimits(null)
+  }
+}
+
+const onPlateNumberBlur = () => {
+  if (form.value.plateNumber.trim()) {
+    loadVehicleAndRule(form.value.plateNumber)
+  }
+}
+
+watch(() => form.value.plateNumber, (newVal) => {
+  if (newVal && newVal.trim().length >= 6) {
+    loadVehicleAndRule(newVal)
+  }
+})
+
 const handleMenuSelect = (index: string) => {
   if (index === 'records') {
     router.push('/admin')
@@ -390,6 +476,9 @@ const resetForm = () => {
     opacityValue: 0,
     inspector: ''
   }
+  vehicleInfo.value = null
+  currentRule.value = null
+  applyLimits(null)
 }
 
 const validateForm = (): boolean => {
@@ -458,6 +547,7 @@ onMounted(async () => {
   await loadStations()
   if (route.query.plateNumber) {
     form.value.plateNumber = String(route.query.plateNumber)
+    loadVehicleAndRule(form.value.plateNumber)
   }
 })
 </script>
@@ -579,6 +669,12 @@ onMounted(async () => {
   font-weight: normal;
   color: #909399;
   margin-left: 2px;
+}
+
+.data-limit {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 4px;
 }
 
 .data-value.over-limit {

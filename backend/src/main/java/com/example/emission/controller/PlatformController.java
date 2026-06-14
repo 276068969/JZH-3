@@ -66,17 +66,19 @@ public class PlatformController {
   @PostMapping("/inspections/judge")
   public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatus(
           @RequestBody InspectionRecord record,
+          @RequestParam(required = false) String fuelType,
           @RequestParam(required = false) String emissionStandard) {
-    EnvironmentalJudgmentResult result = emissionJudgmentService.judge(record, emissionStandard);
+    EnvironmentalJudgmentResult result = emissionJudgmentService.judge(record, fuelType, emissionStandard);
     return ResponseEntity.ok(result);
   }
 
   @GetMapping("/inspections/judge")
   public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatusByNo(
           @RequestParam String inspectionNo,
+          @RequestParam(required = false) String fuelType,
           @RequestParam(required = false) String emissionStandard) {
     return demoDataService.getInspectionDetail(inspectionNo)
-        .map(record -> ResponseEntity.ok(emissionJudgmentService.judge(record, emissionStandard)))
+        .map(record -> ResponseEntity.ok(emissionJudgmentService.judge(record, fuelType, emissionStandard)))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 

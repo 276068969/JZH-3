@@ -14,6 +14,7 @@
         <template v-if="auth.isAdmin">
           <el-menu-item index="vehicles">车辆信息</el-menu-item>
           <el-menu-item index="stations">检测站管理</el-menu-item>
+          <el-menu-item index="rules">限值规则</el-menu-item>
         </template>
         <template v-if="auth.isStation">
           <el-menu-item index="entry">检测录入</el-menu-item>
@@ -276,6 +277,64 @@
           </div>
         </section>
       </template>
+
+      <template v-if="activeMenu === 'rules'">
+        <section class="section admin-section">
+          <div class="card">
+            <div class="section-header">
+              <h2>污染物限值规则管理</h2>
+              <div class="filter-bar">
+                <el-select v-model="ruleFuelFilter" placeholder="燃料类型" clearable style="width: 140px" @change="filterRules">
+                  <el-option v-for="ft in fuelTypes" :key="ft" :label="ft" :value="ft" />
+                </el-select>
+                <el-select v-model="ruleStandardFilter" placeholder="排放标准" clearable style="width: 140px; margin-left: 8px" @change="filterRules">
+                  <el-option v-for="es in emissionStandards" :key="es" :label="es" :value="es" />
+                </el-select>
+                <el-select v-model="ruleStatusFilter" placeholder="状态" clearable style="width: 120px; margin-left: 8px" @change="filterRules">
+                  <el-option label="启用" value="启用" />
+                  <el-option label="停用" value="停用" />
+                </el-select>
+                <el-button type="primary" style="margin-left: 12px" :icon="Plus" @click="openRuleDialog()">新增规则</el-button>
+                <el-button :icon="Refresh" @click="loadRuleData">刷新</el-button>
+              </div>
+            </div>
+            <el-table :data="filteredRuleList" border stripe>
+              <el-table-column prop="fuelType" label="燃料类型" width="120" />
+              <el-table-column prop="emissionStandard" label="排放标准" width="120" />
+              <el-table-column prop="coLimit" label="CO限值(%)" width="110" align="right" />
+              <el-table-column prop="hcLimit" label="HC限值(ppm)" width="120" align="right" />
+              <el-table-column prop="noxLimit" label="NOx限值(ppm)" width="120" align="right" />
+              <el-table-column prop="opacityLimit" label="烟度限值(m⁻¹)" width="130" align="right" />
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === '启用' ? 'success' : 'info'" effect="plain">
+                    {{ row.status }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip />
+              <el-table-column prop="updateTime" label="更新时间" min-width="160" />
+              <el-table-column label="操作" width="160" fixed="right">
+                <template #default="{ row }">
+                  <el-button type="primary" link size="small" @click="openRuleDialog(row)">编辑</el-button>
+                  <el-button type="danger" link size="small" @click="deleteRule(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end">
+              <el-pagination
+                v-model:current-page="rulePage"
+                v-model:page-size="rulePageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="ruleTotal"
+                layout="total, sizes, prev, pager, next"
+                @size-change="loadRuleData"
+                @current-change="loadRuleData"
+              />
+            </div>
+          </div>
+        </section>
+      </template>
     </section>
 
     <el-dialog
@@ -339,15 +398,78 @@
       </el-timeline>
       <el-empty v-else description="暂无审核记录" />
     </el-dialog>
+
+    <el-dialog
+      v-model="ruleDialogVisible"
+      :title="editingRule ? '编辑限值规则' : '新增限值规则'"
+      width="560px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="ruleForm" :rules="ruleFormRules" ref="ruleFormRef" label-width="110px">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="燃料类型" prop="fuelType">
+              <el-select v-model="ruleForm.fuelType" placeholder="请选择燃料类型" style="width: 100%">
+                <el-option v-for="ft in fuelTypes" :key="ft" :label="ft" :value="ft" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="排放标准" prop="emissionStandard">
+              <el-select v-model="ruleForm.emissionStandard" placeholder="请选择排放标准" style="width: 100%">
+                <el-option v-for="es in emissionStandards" :key="es" :label="es" :value="es" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="CO限值(%)" prop="coLimit">
+              <el-input-number v-model="ruleForm.coLimit" :min="0" :precision="3" :step="0.01" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="HC限值(ppm)" prop="hcLimit">
+              <el-input-number v-model="ruleForm.hcLimit" :min="0" :precision="3" :step="0.1" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="NOx限值(ppm)" prop="noxLimit">
+              <el-input-number v-model="ruleForm.noxLimit" :min="0" :precision="3" :step="0.1" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="烟度限值(m⁻¹)" prop="opacityLimit">
+              <el-input-number v-model="ruleForm.opacityLimit" :min="0" :precision="3" :step="0.01" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="状态" prop="status">
+          <el-radio-group v-model="ruleForm.status">
+            <el-radio value="启用">启用</el-radio>
+            <el-radio value="停用">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="ruleForm.remark" type="textarea" :rows="3" :maxlength="500" show-word-limit placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="ruleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="ruleSubmitting" @click="submitRule">确认保存</el-button>
+      </template>
+    </el-dialog>
   </main>
 </template>
 
 <script setup lang="ts">
 import * as echarts from 'echarts'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh, Search, Plus } from '@element-plus/icons-vue'
 import {
   auditInspection,
   fetchAuditRecords,
@@ -357,11 +479,18 @@ import {
   fetchStationStatuses,
   fetchStations,
   searchVehicle,
+  fetchPollutantLimitRules,
+  createPollutantLimitRule,
+  updatePollutantLimitRule,
+  deletePollutantLimitRule,
+  fetchFuelTypes,
+  fetchEmissionStandards,
   type AuditRecord,
   type InspectionRecord,
   type WarningRecord,
   type StationStatus,
-  type Vehicle
+  type Vehicle,
+  type PollutantLimitRule
 } from '@/api/platform'
 import { useAuthStore, UserRole } from '@/stores/auth'
 
@@ -396,6 +525,39 @@ const auditOpinion = ref('')
 const auditLoading = ref(false)
 const auditHistory = ref<AuditRecord[]>([])
 
+const fuelTypes = ref<string[]>(['汽油', '柴油', '混合动力', '天然气', '纯电动'])
+const emissionStandards = ref<string[]>(['国六', '国五', '国四', '国三', '国二'])
+const ruleList = ref<PollutantLimitRule[]>([])
+const ruleTotal = ref(0)
+const rulePage = ref(1)
+const rulePageSize = ref(10)
+const ruleFuelFilter = ref('')
+const ruleStandardFilter = ref('')
+const ruleStatusFilter = ref('')
+
+const ruleDialogVisible = ref(false)
+const editingRule = ref<PollutantLimitRule | null>(null)
+const ruleSubmitting = ref(false)
+const ruleFormRef = ref()
+const ruleForm = reactive<PollutantLimitRule>({
+  fuelType: '',
+  emissionStandard: '',
+  coLimit: 0,
+  hcLimit: 0,
+  noxLimit: 0,
+  opacityLimit: 0,
+  status: '启用',
+  remark: ''
+})
+const ruleFormRules = {
+  fuelType: [{ required: true, message: '请选择燃料类型', trigger: 'change' }],
+  emissionStandard: [{ required: true, message: '请选择排放标准', trigger: 'change' }],
+  coLimit: [{ required: true, message: '请输入CO限值', trigger: 'blur' }],
+  hcLimit: [{ required: true, message: '请输入HC限值', trigger: 'blur' }],
+  noxLimit: [{ required: true, message: '请输入NOx限值', trigger: 'blur' }],
+  opacityLimit: [{ required: true, message: '请输入烟度限值', trigger: 'blur' }]
+}
+
 const getDefaultMenu = (): string => {
   if (auth.isStation) return 'records'
   if (auth.isAdmin || auth.isRegulator) return 'dashboard'
@@ -421,6 +583,7 @@ const pageTitle = computed(() => {
     case 'vehicles': return '车辆信息'
     case 'stations': return '检测站管理'
     case 'warnings': return '超标预警'
+    case 'rules': return '污染物限值规则'
     case 'entry': return '检测录入'
     default: return '数据看板'
   }
@@ -508,6 +671,9 @@ const handleMenuSelect = (index: string) => {
   }
   if (index === 'stations') {
     loadStationData()
+  }
+  if (index === 'rules') {
+    loadRuleData()
   }
 }
 
@@ -717,13 +883,138 @@ const viewAuditHistory = async (row: InspectionRecord) => {
   }
 }
 
+const filteredRuleList = computed(() => ruleList.value)
+
+const loadRuleData = async () => {
+  try {
+    const { data } = await fetchPollutantLimitRules({
+      page: rulePage.value,
+      pageSize: rulePageSize.value,
+      fuelType: ruleFuelFilter.value || undefined,
+      emissionStandard: ruleStandardFilter.value || undefined,
+      status: ruleStatusFilter.value || undefined
+    })
+    ruleList.value = data.records || []
+    ruleTotal.value = data.total || 0
+  } catch (e) {
+    ElMessage.error('加载限值规则数据失败')
+  }
+}
+
+const filterRules = async () => {
+  rulePage.value = 1
+  await loadRuleData()
+}
+
+const openRuleDialog = (row?: PollutantLimitRule) => {
+  editingRule.value = row || null
+  if (row) {
+    Object.assign(ruleForm, {
+      id: row.id,
+      fuelType: row.fuelType,
+      emissionStandard: row.emissionStandard,
+      coLimit: row.coLimit,
+      hcLimit: row.hcLimit,
+      noxLimit: row.noxLimit,
+      opacityLimit: row.opacityLimit,
+      status: row.status || '启用',
+      remark: row.remark || ''
+    })
+  } else {
+    Object.assign(ruleForm, {
+      fuelType: '',
+      emissionStandard: '',
+      coLimit: 0,
+      hcLimit: 0,
+      noxLimit: 0,
+      opacityLimit: 0,
+      status: '启用',
+      remark: ''
+    })
+  }
+  ruleDialogVisible.value = true
+}
+
+const submitRule = async () => {
+  if (!ruleFormRef.value) return
+  try {
+    await ruleFormRef.value.validate()
+  } catch {
+    return
+  }
+  ruleSubmitting.value = true
+  try {
+    const { data } = editingRule.value
+      ? await updatePollutantLimitRule(ruleForm)
+      : await createPollutantLimitRule(ruleForm)
+    if (data.success) {
+      ElMessage.success(data.message)
+      ruleDialogVisible.value = false
+      await loadRuleData()
+    } else {
+      ElMessage.error(data.message)
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败，请重试')
+  } finally {
+    ruleSubmitting.value = false
+  }
+}
+
+const deleteRule = (row: PollutantLimitRule) => {
+  ElMessage({
+    message: `确定要删除「${row.fuelType} / ${row.emissionStandard}」规则吗？`,
+    type: 'warning',
+    showCancelButton: true,
+    confirmButtonText: '确认删除',
+    cancelButtonText: '取消',
+    onConfirm: async () => {
+      try {
+        if (!row.id) return
+        const { data } = await deletePollutantLimitRule(row.id)
+        if (data.success) {
+          ElMessage.success(data.message)
+          await loadRuleData()
+        } else {
+          ElMessage.error(data.message)
+        }
+      } catch (e: any) {
+        ElMessage.error(e?.message || '删除失败，请重试')
+      }
+    }
+  })
+}
+
+const loadFuelAndStandardOptions = async () => {
+  try {
+    const [fuelResp, standardResp] = await Promise.all([
+      fetchFuelTypes(),
+      fetchEmissionStandards()
+    ])
+    if (fuelResp.data && fuelResp.data.length > 0) {
+      fuelTypes.value = fuelResp.data
+    }
+    if (standardResp.data && standardResp.data.length > 0) {
+      emissionStandards.value = standardResp.data
+    }
+  } catch (e) {
+    // 使用默认值
+  }
+}
+
 onMounted(async () => {
-  await loadData()
+  await Promise.all([
+    loadData(),
+    loadFuelAndStandardOptions()
+  ])
   if (activeMenu.value === 'stations') {
     await loadStationData()
   }
   if (activeMenu.value === 'vehicles') {
     await loadVehicleData()
+  }
+  if (activeMenu.value === 'rules') {
+    await loadRuleData()
   }
 })
 </script>

@@ -108,6 +108,39 @@ export interface WarningHandleRequest {
   status: string
 }
 
+export interface PollutantLimitRule {
+  id?: number
+  fuelType: string
+  emissionStandard: string
+  coLimit: number
+  hcLimit: number
+  noxLimit: number
+  opacityLimit: number
+  status?: string
+  remark?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface EnvironmentalJudgmentResult {
+  environmentalStatus: string
+  statusLevel: string
+  exceededItems: Array<{
+    pollutant: string
+    value: number
+    limit: number
+    exceedRatio: number
+  }>
+  suggestion: string
+  appliedStandard: string
+  fuelType?: string
+  emissionStandard?: string
+  coLimit?: number
+  hcLimit?: number
+  noxLimit?: number
+  opacityLimit?: number
+}
+
 export const login = (username: string, password: string) =>
   http.post('/auth/login', { username, password })
 
@@ -159,3 +192,43 @@ export interface CreateInspectionRequest {
 
 export const createInspection = (data: CreateInspectionRequest) =>
   http.post('/inspections/create', data)
+
+export const fetchPollutantLimitRules = (params?: {
+  page?: number
+  pageSize?: number
+  fuelType?: string
+  emissionStandard?: string
+  status?: string
+}) => http.get('/pollutant-limit-rules/list', { params })
+
+export const fetchAllPollutantLimitRules = () =>
+  http.get<PollutantLimitRule[]>('/pollutant-limit-rules/all')
+
+export const fetchPollutantLimitRuleDetail = (id: number) =>
+  http.get<PollutantLimitRule>('/pollutant-limit-rules/detail', { params: { id } })
+
+export const queryPollutantLimitRule = (fuelType: string, emissionStandard: string) =>
+  http.get<PollutantLimitRule>('/pollutant-limit-rules/query', { params: { fuelType, emissionStandard } })
+
+export const createPollutantLimitRule = (data: PollutantLimitRule) =>
+  http.post('/pollutant-limit-rules/create', data)
+
+export const updatePollutantLimitRule = (data: PollutantLimitRule) =>
+  http.post('/pollutant-limit-rules/update', data)
+
+export const deletePollutantLimitRule = (id: number) =>
+  http.post('/pollutant-limit-rules/delete', null, { params: { id } })
+
+export const fetchFuelTypes = () => http.get<string[]>('/pollutant-limit-rules/fuel-types')
+
+export const fetchEmissionStandards = () => http.get<string[]>('/pollutant-limit-rules/emission-standards')
+
+export const judgeEnvironmental = (
+  record: InspectionRecord,
+  params?: { fuelType?: string; emissionStandard?: string }
+) => http.post<EnvironmentalJudgmentResult>('/inspections/judge', record, { params })
+
+export const judgeEnvironmentalByNo = (
+  inspectionNo: string,
+  params?: { fuelType?: string; emissionStandard?: string }
+) => http.get<EnvironmentalJudgmentResult>('/inspections/judge', { params: { inspectionNo, ...params } })

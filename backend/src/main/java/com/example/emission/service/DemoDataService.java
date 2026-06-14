@@ -955,7 +955,11 @@ public class DemoDataService {
       newRecord.setInspector(record.getInspector());
       newRecord.setReportStatus("待审核");
 
-      EnvironmentalJudgmentResult judgment = emissionJudgmentService.judge(newRecord);
+      Optional<Vehicle> vehicleOpt = searchVehicle(newRecord.getPlateNumber());
+      String fuelType = vehicleOpt.map(Vehicle::fuelType).orElse(null);
+      String emissionStandard = vehicleOpt.map(Vehicle::emissionStandard).orElse(null);
+
+      EnvironmentalJudgmentResult judgment = emissionJudgmentService.judge(newRecord, fuelType, emissionStandard);
       String result = "环保合格".equals(judgment.getEnvironmentalStatus())
               || "待确认".equals(judgment.getEnvironmentalStatus()) ? "合格" : "不合格";
       newRecord.setResult(result);

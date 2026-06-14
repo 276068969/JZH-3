@@ -10,6 +10,12 @@ public class EnvironmentalJudgmentResult {
     private List<ExceededItem> exceededItems;
     private String suggestion;
     private String appliedStandard;
+    private String fuelType;
+    private String emissionStandard;
+    private Double coLimit;
+    private Double hcLimit;
+    private Double noxLimit;
+    private Double opacityLimit;
 
     public EnvironmentalJudgmentResult() {}
 
@@ -42,6 +48,30 @@ public class EnvironmentalJudgmentResult {
     @JsonProperty("appliedStandard")
     public String getAppliedStandard() { return appliedStandard; }
     public void setAppliedStandard(String appliedStandard) { this.appliedStandard = appliedStandard; }
+
+    @JsonProperty("fuelType")
+    public String getFuelType() { return fuelType; }
+    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+
+    @JsonProperty("emissionStandard")
+    public String getEmissionStandard() { return emissionStandard; }
+    public void setEmissionStandard(String emissionStandard) { this.emissionStandard = emissionStandard; }
+
+    @JsonProperty("coLimit")
+    public Double getCoLimit() { return coLimit; }
+    public void setCoLimit(Double coLimit) { this.coLimit = coLimit; }
+
+    @JsonProperty("hcLimit")
+    public Double getHcLimit() { return hcLimit; }
+    public void setHcLimit(Double hcLimit) { this.hcLimit = hcLimit; }
+
+    @JsonProperty("noxLimit")
+    public Double getNoxLimit() { return noxLimit; }
+    public void setNoxLimit(Double noxLimit) { this.noxLimit = noxLimit; }
+
+    @JsonProperty("opacityLimit")
+    public Double getOpacityLimit() { return opacityLimit; }
+    public void setOpacityLimit(Double opacityLimit) { this.opacityLimit = opacityLimit; }
 
     public static class ExceededItem {
         private String pollutant;

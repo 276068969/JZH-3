@@ -65,6 +65,9 @@
                 <el-descriptions-item label="检测时间">
                   {{ record.inspectionTime }}
                 </el-descriptions-item>
+                <el-descriptions-item label="燃料/排放标准" v-if="vehicleInfo">
+                  <el-tag size="small" effect="plain">{{ vehicleInfo.fuelType }} / {{ vehicleInfo.emissionStandard }}</el-tag>
+                </el-descriptions-item>
               </el-descriptions>
             </div>
 
@@ -100,10 +103,18 @@
           </div>
 
           <div class="card" style="margin-top: 16px">
-            <h2 class="card-title">
-              <span class="title-icon pollutant-icon">📊</span>
-              污染物检测结果
-            </h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px">
+              <h2 class="card-title" style="margin: 0">
+                <span class="title-icon pollutant-icon">📊</span>
+                污染物检测结果
+              </h2>
+              <el-tag v-if="currentRule" size="small" effect="plain" type="info">
+                适用规则：{{ currentRule.fuelType }} / {{ currentRule.emissionStandard }}
+              </el-tag>
+              <el-tag v-else size="small" effect="plain" type="warning">
+                默认限值
+              </el-tag>
+            </div>
             <el-table :data="pollutantRows" border stripe>
               <el-table-column prop="name" label="污染物项目" width="160" />
               <el-table-column prop="unit" label="单位" width="100" align="center" />
@@ -163,12 +174,26 @@
                 </div>
                 <div class="conclusion-desc">
                   <template v-if="record.result === '合格'">
-                    所有污染物检测项目均符合排放标准，车辆环保状态正常。
+                    所有污染物检测项目均符合排放标准（{{ appliedStandardText }}），车辆环保状态正常。
                   </template>
                   <template v-else>
-                    存在污染物检测项目超出限值，
+                    存在污染物检测项目超出限值（{{ appliedStandardText }}），
                     <strong>建议尽快进行车辆维修并复检</strong>。
                   </template>
+                </div>
+                <div v-if="judgmentResult" class="judgment-detail">
+                  <div style="margin-top: 8px; color: #475569">
+                    <strong>环保状态：</strong>
+                    <el-tag :type="getEnvStatusType(judgmentResult.environmentalStatus)" effect="plain">
+                      {{ judgmentResult.environmentalStatus }}
+                    </el-tag>
+                    <el-tag :type="getLevelType(judgmentResult.statusLevel)" size="small" style="margin-left: 8px">
+                      {{ judgmentResult.statusLevel }}级
+                    </el-tag>
+                  </div>
+                  <div v-if="judgmentResult.suggestion" style="margin-top: 8px; color: #475569">
+                    <strong>处置建议：</strong>{{ judgmentResult.suggestion }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -189,21 +214,18 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { fetchInspectionDetail, type InspectionRecord } from '@/api/platform'
+import {
+  fetchInspectionDetail,
+  searchVehicle,
+  queryPollutantLimitRule,
+  judgeEnvironmentalByNo,
+  type InspectionRecord,
+  type Vehicle,
+  type PollutantLimitRule,
+  type EnvironmentalJudgmentResult
+} from '@/api/platform'
 
-interface PollutantLimit {
-  co: number
-  hc: number
-  nox: number
-  opacity: number
-}
-
-const LIMITS: PollutantLimit = {
-  co: 1.0,
-  hc: 70,
-  nox: 70,
-  opacity: 0.5
-}
+const DEFAULT_LIMITS = { co: 0.3, hc: 30, nox: 70, opacity: 0.25 }
 
 interface PollutantRow {
   name: string
@@ -218,10 +240,33 @@ const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
 const record = ref<InspectionRecord | null>(null)
+const vehicleInfo = ref<Vehicle | null>(null)
+const currentRule = ref<PollutantLimitRule | null>(null)
+const judgmentResult = ref<EnvironmentalJudgmentResult | null>(null)
+
+const currentLimits = computed(() => {
+  if (currentRule.value) {
+    return {
+      co: currentRule.value.coLimit,
+      hc: currentRule.value.hcLimit,
+      nox: currentRule.value.noxLimit,
+      opacity: currentRule.value.opacityLimit
+    }
+  }
+  return DEFAULT_LIMITS
+})
+
+const appliedStandardText = computed(() => {
+  if (currentRule.value) {
+    return `${currentRule.value.fuelType} / ${currentRule.value.emissionStandard}`
+  }
+  return '默认标准'
+})
 
 const pollutantRows = computed<PollutantRow[]>(() => {
   if (!record.value) return []
   const r = record.value
+  const limits = currentLimits.value
   const calcRow = (name: string, unit: string, value: number, limit: number): PollutantRow => {
     const passed = value <= limit
     const rawPct = Math.round((value / limit) * 100)
@@ -229,10 +274,10 @@ const pollutantRows = computed<PollutantRow[]>(() => {
     return { name, unit, limit, value, passed, percentage }
   }
   return [
-    calcRow('一氧化碳 (CO)', '%', r.coValue, LIMITS.co),
-    calcRow('碳氢化合物 (HC)', 'ppm', r.hcValue, LIMITS.hc),
-    calcRow('氮氧化物 (NOx)', 'ppm', r.noxValue, LIMITS.nox),
-    calcRow('烟度 (Opacity)', 'm⁻¹', r.opacityValue, LIMITS.opacity)
+    calcRow('一氧化碳 (CO)', '%', Number(r.coValue.toFixed(2)), limits.co),
+    calcRow('碳氢化合物 (HC)', 'ppm', Number(r.hcValue.toFixed(1)), limits.hc),
+    calcRow('氮氧化物 (NOx)', 'ppm', Number(r.noxValue.toFixed(1)), limits.nox),
+    calcRow('烟度 (Opacity)', 'm⁻¹', Number(r.opacityValue.toFixed(2)), limits.opacity)
   ]
 })
 
@@ -240,6 +285,21 @@ const getStatusType = (status: string) => {
   if (status === '已审核') return 'primary'
   if (status === '待审核') return 'warning'
   if (status === '已退回') return 'danger'
+  return 'info'
+}
+
+const getEnvStatusType = (status: string) => {
+  if (status === '环保合格' || status === '合格') return 'success'
+  if (status === '轻微超标') return 'warning'
+  if (status === '超标') return 'warning'
+  if (status === '严重超标') return 'danger'
+  return 'info'
+}
+
+const getLevelType = (level: string) => {
+  if (level === '合格' || level === '低') return 'success'
+  if (level === '中') return 'warning'
+  if (level === '高') return 'danger'
   return 'info'
 }
 
@@ -261,6 +321,35 @@ const loadDetail = async () => {
   try {
     const { data } = await fetchInspectionDetail(inspectionNo)
     record.value = data
+
+    if (data.plateNumber) {
+      try {
+        const vehicleResp = await searchVehicle(data.plateNumber)
+        if (vehicleResp.data.success && vehicleResp.data.data) {
+          vehicleInfo.value = vehicleResp.data.data
+          try {
+            const ruleResp = await queryPollutantLimitRule(
+              vehicleInfo.value.fuelType,
+              vehicleInfo.value.emissionStandard
+            )
+            currentRule.value = ruleResp.data
+          } catch {
+            currentRule.value = null
+          }
+        }
+      } catch {
+        // ignore vehicle info load error
+      }
+
+      try {
+        const fuelType = vehicleInfo.value?.fuelType
+        const emissionStandard = vehicleInfo.value?.emissionStandard
+        const judgeResp = await judgeEnvironmentalByNo(inspectionNo, { fuelType, emissionStandard })
+        judgmentResult.value = judgeResp.data
+      } catch {
+        // ignore judgment load error
+      }
+    }
   } catch (e: any) {
     if (e?.response?.status === 404) {
       ElMessage.error('未找到对应的检测报告')
@@ -383,6 +472,12 @@ onMounted(() => {
 .conclusion-desc {
   color: #516173;
   line-height: 1.75;
+}
+
+.judgment-detail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
 }
 
 .audit-opinion {
