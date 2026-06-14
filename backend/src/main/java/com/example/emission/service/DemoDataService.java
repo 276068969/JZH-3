@@ -570,22 +570,76 @@ public class DemoDataService {
       days = 7;
     }
 
+    LocalDate today = LocalDate.now();
+    LocalDate startDate = today.minusDays(days - 1);
+    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    List<InspectionRecord> periodInspections = inspections.stream()
+        .filter(r -> {
+          String timeStr = r.getInspectionTime();
+          if (timeStr == null || timeStr.length() < 10) {
+            return false;
+          }
+          try {
+            LocalDate inspectionDate = LocalDate.parse(timeStr.substring(0, 10), dateFormatter);
+            return !inspectionDate.isBefore(startDate) && !inspectionDate.isAfter(today);
+          } catch (Exception e) {
+            return false;
+          }
+        })
+        .collect(Collectors.toList());
+
     long pendingCount = inspections.stream()
         .filter(r -> "待审核".equals(r.getReportStatus()))
         .count();
 
+    int totalInspections = periodInspections.size();
+    int passedVehicles = (int) periodInspections.stream()
+        .filter(r -> "合格".equals(r.getResult()))
+        .count();
+    int failedVehicles = totalInspections - passedVehicles;
+    double exceedRate = totalInspections > 0
+        ? Math.round(failedVehicles * 1000.0 / totalInspections) / 10.0
+        : 0.0;
+
     List<Map<String, Object>> trend = new ArrayList<>();
     for (int i = days - 1; i >= 0; i--) {
-      LocalDate date = LocalDate.now().minusDays(i);
-      int extra = Math.abs(date.hashCode()) % 22;
-      int baseCount = 85 + (int) (Math.sin(i * 0.6) * 18) + extra;
-      trend.add(Map.of("date", date.toString(), "count", baseCount));
+      LocalDate date = today.minusDays(i);
+      String dateStr = date.format(dateFormatter);
+      long count = periodInspections.stream()
+          .filter(r -> r.getInspectionTime() != null
+              && r.getInspectionTime().length() >= 10
+              && r.getInspectionTime().substring(0, 10).equals(dateStr))
+          .count();
+      trend.add(Map.of("date", dateStr, "count", (int) count));
     }
 
-    int totalInspections = trend.stream().mapToInt(item -> (int) item.get("count")).sum();
-    int failedVehicles = (int) (totalInspections * 0.11);
-    int passedVehicles = totalInspections - failedVehicles;
-    double exceedRate = Math.round(failedVehicles * 1000.0 / totalInspections) / 10.0;
+    Map<String, Long> standardCountMap = new java.util.LinkedHashMap<>();
+    standardCountMap.put("国六", 0L);
+    standardCountMap.put("国五", 0L);
+    standardCountMap.put("国四及以下", 0L);
+
+    for (Vehicle v : vehicles) {
+      String standard = v.emissionStandard();
+      if (standard == null) {
+        standardCountMap.merge("国四及以下", 1L, Long::sum);
+      } else if (standard.contains("国六")) {
+        standardCountMap.merge("国六", 1L, Long::sum);
+      } else if (standard.contains("国五")) {
+        standardCountMap.merge("国五", 1L, Long::sum);
+      } else {
+        standardCountMap.merge("国四及以下", 1L, Long::sum);
+      }
+    }
+
+    List<Map<String, Object>> emissionStandards = new ArrayList<>();
+    long vehicleTotal = vehicles.size();
+    for (Map.Entry<String, Long> entry : standardCountMap.entrySet()) {
+      int value = vehicleTotal > 0
+          ? (int) Math.round(entry.getValue() * 100.0 / vehicleTotal)
+          : 0;
+      emissionStandards.add(Map.of("name", entry.getKey(), "value", value));
+    }
 
     return Map.of(
         "days", days,
@@ -596,11 +650,7 @@ public class DemoDataService {
         "pendingAudit", pendingCount,
         "stationCount", stations().size(),
         "trend", trend,
-        "emissionStandards", List.of(
-            Map.of("name", "国六", "value", 54),
-            Map.of("name", "国五", "value", 32),
-            Map.of("name", "国四及以下", "value", 14)
-        )
+        "emissionStandards", emissionStandards
     );
   }
 
