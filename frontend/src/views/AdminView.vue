@@ -382,6 +382,12 @@ const timeRange = ref<number>(7)
 let trendChartInstance: echarts.ECharts | null = null
 let standardChartInstance: echarts.ECharts | null = null
 
+type Metric = {
+  label: string
+  value: string | number
+  highlight?: boolean
+}
+
 const auditDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
 const currentRecord = ref<InspectionRecord | null>(null)
@@ -422,9 +428,9 @@ const pageTitle = computed(() => {
 
 const showTimeRange = computed(() => activeMenu.value === 'dashboard')
 
-const metrics = computed(() => {
+const metrics = computed<Metric[]>(() => {
   const periodLabel = `近${timeRange.value}日`
-  const baseMetrics = [
+  const baseMetrics: Metric[] = [
     { label: `${periodLabel}检测车辆数`, value: dashboard.value.totalInspections ?? 0 },
     { label: `${periodLabel}合格车辆数`, value: dashboard.value.passedVehicles ?? 0 },
     { label: `${periodLabel}不合格车辆数`, value: dashboard.value.failedVehicles ?? 0 }
