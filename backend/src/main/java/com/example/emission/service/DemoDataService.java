@@ -308,12 +308,26 @@ public class DemoDataService {
         .collect(Collectors.toList());
   }
 
+  private final List<Station> allStations = List.of(
+      new Station(1, "朝阳机动车环保检测站", "朝阳区", "北京市朝阳区环保科技园 18 号", "010-61112222", "正常"),
+      new Station(2, "海淀机动车检测中心", "海淀区", "北京市海淀区清河路 66 号", "010-62223333", "正常"),
+      new Station(3, "亦庄机动车检测站", "经开区", "北京市经济技术开发区荣华南路 9 号", "010-63334444", "正常"),
+      new Station(4, "西城机动车检测站", "西城区", "北京市西城区西直门南大街 25 号", "010-64445555", "正常"),
+      new Station(5, "东城车辆检测中心", "东城区", "北京市东城区东四十条 12 号", "010-65556666", "停运"),
+      new Station(6, "丰台环保检测站", "丰台区", "北京市丰台区丰台路 88 号", "010-66667777", "正常"),
+      new Station(7, "通州机动车检测站", "通州区", "北京市通州区新华大街 100 号", "010-67778888", "正常"),
+      new Station(8, "石景山检测中心", "石景山区", "北京市石景山区古城大街 30 号", "010-68889999", "停运")
+  );
+
   public List<Station> stations() {
-    return List.of(
-        new Station(1, "朝阳机动车环保检测站", "朝阳区", "北京市朝阳区环保科技园 18 号", "010-61112222", "正常"),
-        new Station(2, "海淀机动车检测中心", "海淀区", "北京市海淀区清河路 66 号", "010-62223333", "正常"),
-        new Station(3, "亦庄机动车检测站", "经开区", "北京市经济技术开发区荣华南路 9 号", "010-63334444", "正常")
-    );
+    return allStations;
+  }
+
+  public List<Station> stations(String district, String status) {
+    return allStations.stream()
+        .filter(station -> (district == null || district.isBlank() || station.district().equals(district)))
+        .filter(station -> (status == null || status.isBlank() || station.status().equals(status)))
+        .collect(Collectors.toList());
   }
 
   public List<Announcement> announcements() {
@@ -592,7 +606,7 @@ public class DemoDataService {
 
   public List<StationStatus> stationStatuses() {
     String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-    return stations().stream()
+    return allStations.stream()
         .map(station -> {
           List<InspectionRecord> stationRecords = inspections.stream()
               .filter(record -> record.getStationName().equals(station.name()))

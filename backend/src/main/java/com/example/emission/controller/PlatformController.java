@@ -65,8 +65,10 @@ public class PlatformController {
   }
 
   @GetMapping("/stations")
-  public List<Station> stations() {
-    return demoDataService.stations();
+  public List<Station> stations(
+      @RequestParam(required = false) String district,
+      @RequestParam(required = false) String status) {
+    return demoDataService.stations(district, status);
   }
 
   @GetMapping("/stations/status")

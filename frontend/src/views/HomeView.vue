@@ -122,12 +122,35 @@
     <section class="section" ref="stationSection">
       <div class="shell">
         <h2>检测站信息</h2>
+        <div class="station-filter">
+          <el-select v-model="stationDistrict" placeholder="选择辖区" clearable style="width: 160px">
+            <el-option label="全部辖区" value="" />
+            <el-option
+              v-for="d in districtOptions"
+              :key="d"
+              :label="d"
+              :value="d"
+            />
+          </el-select>
+          <el-select v-model="stationStatus" placeholder="选择状态" clearable style="width: 140px">
+            <el-option label="全部状态" value="" />
+            <el-option label="正常" value="正常" />
+            <el-option label="停运" value="停运" />
+          </el-select>
+          <el-button type="primary" @click="queryStations">查询</el-button>
+        </div>
         <el-table :data="stations" border>
           <el-table-column prop="name" label="检测站" min-width="160" />
           <el-table-column prop="district" label="辖区" width="120" />
           <el-table-column prop="address" label="地址" min-width="220" />
           <el-table-column prop="phone" label="电话" width="150" />
-          <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === '正常' ? 'success' : 'danger'" effect="light">
+                {{ row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
     </section>
@@ -160,6 +183,9 @@ const successMessage = ref('')
 const stations = ref<Station[]>([])
 const announcements = ref<Announcement[]>([])
 const stationSection = ref<HTMLElement | null>(null)
+const stationDistrict = ref('')
+const stationStatus = ref('')
+const districtOptions = ref<string[]>([])
 
 const normalizeKeyword = (raw: string | null | undefined): string => {
   if (!raw) return ''
@@ -253,6 +279,29 @@ const getStatusType = (status: string) => {
 
 const scrollToStations = () => stationSection.value?.scrollIntoView({ behavior: 'smooth' })
 
+const queryStations = async () => {
+  try {
+    const { data } = await fetchStations(
+      stationDistrict.value || undefined,
+      stationStatus.value || undefined
+    )
+    stations.value = data
+  } catch {
+    ElMessage.warning('检测站查询失败')
+  }
+}
+
+const loadStations = async () => {
+  try {
+    const { data } = await fetchStations()
+    stations.value = data
+    const districts = [...new Set(data.map(s => s.district))]
+    districtOptions.value = districts
+  } catch {
+    ElMessage.warning('检测站加载失败')
+  }
+}
+
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return ''
   if (dateStr.includes(' ')) {
@@ -266,9 +315,9 @@ const viewReportDetail = (row: InspectionRecord) => {
 }
 
 onMounted(async () => {
-  const [stationResp, announcementResp] = await Promise.all([fetchStations(), fetchAnnouncements()])
-  stations.value = stationResp.data
+  const [announcementResp] = await Promise.all([fetchAnnouncements()])
   announcements.value = announcementResp.data
+  await loadStations()
   await queryVehicle()
 })
 </script>
@@ -293,5 +342,12 @@ h2 {
 
 .section-header h2 {
   margin: 0;
+}
+
+.station-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
 }
 </style>

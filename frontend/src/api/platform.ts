@@ -108,7 +108,8 @@ export const fetchInspections = (plateNumber?: string) =>
 export const fetchInspectionDetail = (inspectionNo: string) =>
   http.get<InspectionRecord>('/inspections/detail', { params: { inspectionNo } })
 
-export const fetchStations = () => http.get<Station[]>('/stations')
+export const fetchStations = (district?: string, status?: string) =>
+  http.get<Station[]>('/stations', { params: { district, status } })
 
 export const fetchAnnouncements = () => http.get<Announcement[]>('/announcements')
 
