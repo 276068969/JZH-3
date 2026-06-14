@@ -146,3 +146,16 @@ export const auditInspection = (data: AuditRequest) =>
 
 export const fetchAuditRecords = (inspectionNo: string) =>
   http.get<AuditRecord[]>('/inspections/audit-records', { params: { inspectionNo } })
+
+export interface CreateInspectionRequest {
+  plateNumber: string
+  stationName: string
+  coValue: number
+  hcValue: number
+  noxValue: number
+  opacityValue: number
+  inspector: string
+}
+
+export const createInspection = (data: CreateInspectionRequest) =>
+  http.post('/inspections/create', data)

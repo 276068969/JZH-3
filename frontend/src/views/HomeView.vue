@@ -9,6 +9,7 @@
         <nav>
           <el-button text @click="router.push('/')">车辆查询</el-button>
           <el-button text @click="scrollToStations">检测站</el-button>
+          <el-button text @click="router.push('/inspection-entry')">检测录入</el-button>
           <el-button type="primary" @click="router.push('/admin')">管理后台</el-button>
         </nav>
       </div>

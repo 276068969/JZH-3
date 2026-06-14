@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -166,6 +167,7 @@ public class DemoDataService {
 
   private final List<AuditRecord> auditRecords = new ArrayList<>();
   private final AtomicLong auditRecordIdGenerator = new AtomicLong(1);
+  private final AtomicInteger inspectionNoGenerator = new AtomicInteger(100);
 
   private WarningRecord createWarning(Long id, String plateNumber, String pollutant,
                                       String level, String description, String status, String createdAt) {
@@ -839,5 +841,67 @@ public class DemoDataService {
         .filter(r -> r.getPlateNumber().equalsIgnoreCase(plateNumber.trim()))
         .sorted((a, b) -> b.getInspectionTime().compareTo(a.getInspectionTime()))
         .collect(Collectors.toList());
+  }
+
+  public synchronized Map<String, Object> createInspection(InspectionRecord record, String operator) {
+    try {
+      if (record.getPlateNumber() == null || record.getPlateNumber().isBlank()) {
+        return Map.of("success", false, "message", "车牌号不能为空");
+      }
+      if (record.getStationName() == null || record.getStationName().isBlank()) {
+        return Map.of("success", false, "message", "检测站不能为空");
+      }
+      if (record.getInspector() == null || record.getInspector().isBlank()) {
+        return Map.of("success", false, "message", "检测人员不能为空");
+      }
+
+      String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+      String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+      int seq = inspectionNoGenerator.incrementAndGet();
+      String inspectionNo = "JC" + dateStr + String.format("%03d", seq);
+
+      InspectionRecord newRecord = new InspectionRecord();
+      newRecord.setInspectionNo(inspectionNo);
+      newRecord.setPlateNumber(record.getPlateNumber().trim().toUpperCase());
+      newRecord.setStationName(record.getStationName());
+      newRecord.setInspectionTime(now);
+      newRecord.setCoValue(record.getCoValue());
+      newRecord.setHcValue(record.getHcValue());
+      newRecord.setNoxValue(record.getNoxValue());
+      newRecord.setOpacityValue(record.getOpacityValue());
+      newRecord.setInspector(record.getInspector());
+      newRecord.setReportStatus("待审核");
+
+      String result = determineResult(newRecord);
+      newRecord.setResult(result);
+
+      inspections.add(newRecord);
+
+      return Map.of(
+          "success", true,
+          "message", "检测记录录入成功",
+          "record", newRecord
+      );
+    } catch (Exception e) {
+      log.error("创建检测记录失败", e);
+      return Map.of("success", false, "message", "检测记录录入失败：" + e.getMessage());
+    }
+  }
+
+  private String determineResult(InspectionRecord record) {
+    double coLimit = 0.3;
+    double hcLimit = 30.0;
+    double noxLimit = 70.0;
+    double opacityLimit = 0.25;
+
+    boolean coPass = record.getCoValue() <= coLimit;
+    boolean hcPass = record.getHcValue() <= hcLimit;
+    boolean noxPass = record.getNoxValue() <= noxLimit;
+    boolean opacityPass = record.getOpacityValue() <= opacityLimit;
+
+    if (coPass && hcPass && noxPass && opacityPass) {
+      return "合格";
+    }
+    return "不合格";
   }
 }

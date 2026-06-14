@@ -5,10 +5,11 @@
         <span class="brand-mark">环</span>
         <span>监管后台</span>
       </div>
-      <el-menu default-active="dashboard">
+      <el-menu :default-active="activeMenu" @select="handleMenuSelect">
         <el-menu-item index="dashboard">数据看板</el-menu-item>
         <el-menu-item index="vehicles">车辆信息</el-menu-item>
         <el-menu-item index="records">检测记录</el-menu-item>
+        <el-menu-item index="entry">检测录入</el-menu-item>
         <el-menu-item index="warnings">超标预警</el-menu-item>
         <el-menu-item index="stations">检测站管理</el-menu-item>
       </el-menu>
@@ -230,6 +231,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+const activeMenu = ref('dashboard')
 const dashboard = ref<any>({})
 const allRecords = ref<InspectionRecord[]>([])
 const records = ref<InspectionRecord[]>([])
@@ -300,6 +302,13 @@ const getWarningStatusType = (status: string) => {
 
 const goToWarningHandle = (row: WarningRecord) => {
   router.push({ name: 'warning-handle', params: { id: row.id } })
+}
+
+const handleMenuSelect = (index: string) => {
+  activeMenu.value = index
+  if (index === 'entry') {
+    router.push('/inspection-entry')
+  }
 }
 
 const logout = async () => {

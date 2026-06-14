@@ -52,6 +52,12 @@ public class PlatformController {
     return demoDataService.audit(request, auditor);
   }
 
+  @PostMapping("/inspections/create")
+  public Map<String, Object> createInspection(@RequestBody InspectionRecord record, Authentication authentication) {
+    String operator = authentication != null ? authentication.getName() : "station";
+    return demoDataService.createInspection(record, operator);
+  }
+
   @GetMapping("/inspections/detail")
   public ResponseEntity<InspectionRecord> inspectionDetail(@RequestParam String inspectionNo) {
     return demoDataService.getInspectionDetail(inspectionNo)
