@@ -37,7 +37,7 @@ const submit = async () => {
   error.value = ''
   try {
     await auth.signIn(username.value, password.value)
-    await router.push('/admin')
+    await router.push(auth.homeRoute)
   } catch {
     error.value = '账号或密码不正确'
   } finally {

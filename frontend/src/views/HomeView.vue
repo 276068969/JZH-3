@@ -9,8 +9,33 @@
         <nav>
           <el-button text @click="router.push('/')">车辆查询</el-button>
           <el-button text @click="scrollToStations">检测站</el-button>
-          <el-button text @click="router.push('/inspection-entry')">检测录入</el-button>
-          <el-button type="primary" @click="router.push('/admin')">管理后台</el-button>
+          <template v-if="auth.isLoggedIn && (auth.isAdmin || auth.isRegulator || auth.isStation)">
+            <el-button text @click="router.push('/inspection-entry')">检测录入</el-button>
+            <el-button type="primary" @click="goToAdmin">
+              {{ auth.isStation ? '工作台' : '管理后台' }}
+            </el-button>
+          </template>
+          <template v-else-if="!auth.isLoggedIn">
+            <el-button text @click="router.push('/inspection-entry')">检测录入</el-button>
+            <el-button type="primary" @click="router.push('/login')">登录</el-button>
+          </template>
+          <template v-if="auth.isLoggedIn">
+            <el-dropdown @command="handleDropdownCommand">
+              <span class="user-info">
+                <el-avatar :size="28" style="background-color: #409EFF; margin-right: 8px">
+                  {{ auth.user?.displayName?.charAt(0) || '用' }}
+                </el-avatar>
+                {{ auth.user?.displayName }}
+                <el-icon><arrow-down /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                  <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
         </nav>
       </div>
     </header>
@@ -170,8 +195,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import StationDetailDrawer from '@/components/StationDetailDrawer.vue'
+import { useAuthStore } from '@/stores/auth'
 import {
   fetchAnnouncements,
   fetchInspections,
@@ -187,6 +214,30 @@ import {
 } from '@/api/platform'
 
 const router = useRouter()
+const auth = useAuthStore()
+
+const goToAdmin = () => {
+  router.push(auth.homeRoute)
+}
+
+const handleDropdownCommand = async (command: string) => {
+  if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+      auth.signOut()
+      ElMessage.success('已退出登录')
+      router.push('/')
+    } catch {
+      // 用户取消
+    }
+  } else if (command === 'profile') {
+    ElMessage.info('个人中心功能开发中')
+  }
+}
 const keyword = ref('京A12345')
 const vehicle = ref<Vehicle | null>(null)
 const inspections = ref<InspectionRecord[]>([])
@@ -396,5 +447,17 @@ h2 {
   gap: 12px;
   margin-bottom: 16px;
   align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #303133;
+  margin-left: 12px;
+}
+
+.user-info:hover {
+  color: #409EFF;
 }
 </style>
