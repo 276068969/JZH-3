@@ -2,6 +2,7 @@ package com.example.emission.controller;
 
 import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
+import com.example.emission.dto.EnvironmentalJudgmentResult;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.dto.WarningHandleRequest;
 import com.example.emission.model.Announcement;
@@ -11,6 +12,7 @@ import com.example.emission.model.Station;
 import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
 import com.example.emission.service.DemoDataService;
+import com.example.emission.service.EmissionJudgmentService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping
 public class PlatformController {
   private final DemoDataService demoDataService;
+  private final EmissionJudgmentService emissionJudgmentService;
 
-  public PlatformController(DemoDataService demoDataService) {
+  public PlatformController(DemoDataService demoDataService, EmissionJudgmentService emissionJudgmentService) {
     this.demoDataService = demoDataService;
+    this.emissionJudgmentService = emissionJudgmentService;
   }
 
   @GetMapping("/dashboard")
@@ -56,6 +60,23 @@ public class PlatformController {
   public Map<String, Object> createInspection(@RequestBody InspectionRecord record, Authentication authentication) {
     String operator = authentication != null ? authentication.getName() : "station";
     return demoDataService.createInspection(record, operator);
+  }
+
+  @PostMapping("/inspections/judge")
+  public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatus(
+          @RequestBody InspectionRecord record,
+          @RequestParam(required = false) String emissionStandard) {
+    EnvironmentalJudgmentResult result = emissionJudgmentService.judge(record, emissionStandard);
+    return ResponseEntity.ok(result);
+  }
+
+  @GetMapping("/inspections/judge")
+  public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatusByNo(
+          @RequestParam String inspectionNo,
+          @RequestParam(required = false) String emissionStandard) {
+    return demoDataService.getInspectionDetail(inspectionNo)
+        .map(record -> ResponseEntity.ok(emissionJudgmentService.judge(record, emissionStandard)))
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @GetMapping("/inspections/detail")

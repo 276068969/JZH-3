@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.emission.dto.ApiResponse;
 import com.example.emission.dto.AuditRequest;
+import com.example.emission.dto.EnvironmentalJudgmentResult;
 import com.example.emission.dto.ErrorCode;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.dto.WarningHandleRequest;
@@ -57,10 +58,13 @@ public class DemoDataService {
 
   private final AnnouncementMapper announcementMapper;
   private final JdbcTemplate jdbcTemplate;
+  private final EmissionJudgmentService emissionJudgmentService;
 
-  public DemoDataService(AnnouncementMapper announcementMapper, JdbcTemplate jdbcTemplate) {
+  public DemoDataService(AnnouncementMapper announcementMapper, JdbcTemplate jdbcTemplate,
+                          EmissionJudgmentService emissionJudgmentService) {
     this.announcementMapper = announcementMapper;
     this.jdbcTemplate = jdbcTemplate;
+    this.emissionJudgmentService = emissionJudgmentService;
   }
 
   private void ensureAnnouncementTableExists() {
@@ -872,15 +876,22 @@ public class DemoDataService {
       newRecord.setInspector(record.getInspector());
       newRecord.setReportStatus("待审核");
 
-      String result = determineResult(newRecord);
+      EnvironmentalJudgmentResult judgment = emissionJudgmentService.judge(newRecord);
+      String result = "环保合格".equals(judgment.getEnvironmentalStatus())
+              || "待确认".equals(judgment.getEnvironmentalStatus()) ? "合格" : "不合格";
       newRecord.setResult(result);
 
       inspections.add(newRecord);
 
+      if (!"环保合格".equals(judgment.getEnvironmentalStatus())) {
+        generateWarningFromJudgment(newRecord, judgment);
+      }
+
       return Map.of(
           "success", true,
           "message", "检测记录录入成功",
-          "record", newRecord
+          "record", newRecord,
+          "judgment", judgment
       );
     } catch (Exception e) {
       log.error("创建检测记录失败", e);
@@ -888,20 +899,25 @@ public class DemoDataService {
     }
   }
 
-  private String determineResult(InspectionRecord record) {
-    double coLimit = 0.3;
-    double hcLimit = 30.0;
-    double noxLimit = 70.0;
-    double opacityLimit = 0.25;
-
-    boolean coPass = record.getCoValue() <= coLimit;
-    boolean hcPass = record.getHcValue() <= hcLimit;
-    boolean noxPass = record.getNoxValue() <= noxLimit;
-    boolean opacityPass = record.getOpacityValue() <= opacityLimit;
-
-    if (coPass && hcPass && noxPass && opacityPass) {
-      return "合格";
+  private void generateWarningFromJudgment(InspectionRecord record, EnvironmentalJudgmentResult judgment) {
+    String pollutant;
+    if (!judgment.getExceededItems().isEmpty()) {
+      pollutant = judgment.getExceededItems().get(0).getPollutant();
+    } else {
+      pollutant = "综合";
     }
-    return "不合格";
+
+    WarningRecord warning = createWarning(
+        warningIdGenerator.getAndIncrement(),
+        record.getPlateNumber(),
+        pollutant,
+        judgment.getStatusLevel(),
+        judgment.getSuggestion(),
+        "待处置",
+        record.getInspectionTime()
+    );
+    warningRecords.add(warning);
+    log.info("环保状态判定自动生成预警：plateNumber={}, status={}, level={}",
+            record.getPlateNumber(), judgment.getEnvironmentalStatus(), judgment.getStatusLevel());
   }
 }
