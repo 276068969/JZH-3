@@ -45,37 +45,37 @@ public class DemoDataService {
   private static final String CREATE_ANNOUNCEMENT_TABLE_SQL =
       "CREATE TABLE IF NOT EXISTS announcements ("
           + "id BIGINT PRIMARY KEY AUTO_INCREMENT, "
-          + "title VARCHAR(255) NOT NULL COMMENT '公告标题', "
-          + "content TEXT COMMENT '公告内容', "
-          + "type VARCHAR(32) COMMENT '公告类型：政策公告、通知公告等', "
-          + "publish_status VARCHAR(32) NOT NULL DEFAULT '草稿' COMMENT '发布状态：草稿、已发布、已下线', "
-          + "publisher VARCHAR(64) COMMENT '发布人/发布单位', "
-          + "publish_time DATETIME COMMENT '发布时间', "
-          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "
-          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间', "
+          + "title VARCHAR(255) NOT NULL, "
+          + "content TEXT, "
+          + "type VARCHAR(32), "
+          + "publish_status VARCHAR(32) NOT NULL DEFAULT '草稿', "
+          + "publisher VARCHAR(64), "
+          + "publish_time DATETIME, "
+          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP, "
+          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP, "
           + "INDEX idx_publish_status (publish_status), "
           + "INDEX idx_type (type), "
           + "INDEX idx_publish_time (publish_time)"
-          + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+          + ")";
 
   private static final String CREATE_POLLUTANT_LIMIT_RULE_TABLE_SQL =
       "CREATE TABLE IF NOT EXISTS pollutant_limit_rules ("
-          + "id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '规则ID', "
-          + "fuel_type VARCHAR(32) NOT NULL COMMENT '燃料类型', "
-          + "emission_standard VARCHAR(32) NOT NULL COMMENT '排放标准', "
-          + "co_limit DECIMAL(8,3) NOT NULL COMMENT 'CO限值', "
-          + "hc_limit DECIMAL(8,3) NOT NULL COMMENT 'HC限值', "
-          + "nox_limit DECIMAL(8,3) NOT NULL COMMENT 'NOx限值', "
-          + "opacity_limit DECIMAL(8,3) NOT NULL COMMENT '烟度限值', "
-          + "status VARCHAR(32) NOT NULL DEFAULT '启用' COMMENT '状态', "
-          + "remark VARCHAR(512) COMMENT '备注', "
-          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "
-          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间', "
+          + "id BIGINT PRIMARY KEY AUTO_INCREMENT, "
+          + "fuel_type VARCHAR(32) NOT NULL, "
+          + "emission_standard VARCHAR(32) NOT NULL, "
+          + "co_limit DECIMAL(8,3) NOT NULL, "
+          + "hc_limit DECIMAL(8,3) NOT NULL, "
+          + "nox_limit DECIMAL(8,3) NOT NULL, "
+          + "opacity_limit DECIMAL(8,3) NOT NULL, "
+          + "status VARCHAR(32) NOT NULL DEFAULT '启用', "
+          + "remark VARCHAR(512), "
+          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP, "
+          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP, "
           + "UNIQUE KEY uk_fuel_standard (fuel_type, emission_standard), "
           + "INDEX idx_fuel_type (fuel_type), "
           + "INDEX idx_emission_standard (emission_standard), "
           + "INDEX idx_status (status)"
-          + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+          + ")";
 
   private final AnnouncementMapper announcementMapper;
   private final PollutantLimitRuleMapper pollutantLimitRuleMapper;
