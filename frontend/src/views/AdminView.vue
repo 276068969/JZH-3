@@ -397,7 +397,7 @@ const auditLoading = ref(false)
 const auditHistory = ref<AuditRecord[]>([])
 
 const getDefaultMenu = (): string => {
-  if (auth.isStation) return 'entry'
+  if (auth.isStation) return 'records'
   if (auth.isAdmin || auth.isRegulator) return 'dashboard'
   return 'dashboard'
 }

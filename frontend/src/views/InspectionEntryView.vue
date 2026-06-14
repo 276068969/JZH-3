@@ -377,7 +377,7 @@ const handleMenuSelect = (index: string) => {
 }
 
 const goBack = () => {
-  router.back()
+  router.push('/admin')
 }
 
 const resetForm = () => {

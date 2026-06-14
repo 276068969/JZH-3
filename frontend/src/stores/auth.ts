@@ -30,9 +30,8 @@ export const useAuthStore = defineStore('auth', {
       switch (state.user?.role) {
         case UserRole.ADMIN:
         case UserRole.REGULATOR:
-          return '/admin'
         case UserRole.STATION:
-          return '/inspection-entry'
+          return '/admin'
         case UserRole.USER:
         default:
           return '/'
