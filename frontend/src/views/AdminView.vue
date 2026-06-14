@@ -468,7 +468,7 @@
 import * as echarts from 'echarts'
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Search, Plus } from '@element-plus/icons-vue'
 import {
   auditInspection,
@@ -962,13 +962,16 @@ const submitRule = async () => {
 }
 
 const deleteRule = (row: PollutantLimitRule) => {
-  ElMessage({
-    message: `确定要删除「${row.fuelType} / ${row.emissionStandard}」规则吗？`,
-    type: 'warning',
-    showCancelButton: true,
-    confirmButtonText: '确认删除',
-    cancelButtonText: '取消',
-    onConfirm: async () => {
+  ElMessageBox.confirm(
+    `确定要删除「${row.fuelType} / ${row.emissionStandard}」规则吗？`,
+    '删除确认',
+    {
+      type: 'warning',
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消'
+    }
+  )
+    .then(async () => {
       try {
         if (!row.id) return
         const { data } = await deletePollutantLimitRule(row.id)
@@ -981,8 +984,8 @@ const deleteRule = (row: PollutantLimitRule) => {
       } catch (e: any) {
         ElMessage.error(e?.message || '删除失败，请重试')
       }
-    }
-  })
+    })
+    .catch(() => {})
 }
 
 const loadFuelAndStandardOptions = async () => {

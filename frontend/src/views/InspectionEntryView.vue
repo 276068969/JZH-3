@@ -73,7 +73,7 @@
 
           <el-alert
             v-if="vehicleInfo"
-            :title="`车辆信息：${vehicleInfo.fuelType} / ${vehicleInfo.emissionStandard}"
+            :title="`车辆信息：${vehicleInfo.fuelType} / ${vehicleInfo.emissionStandard}`"
             type="info"
             :closable="false"
             style="margin: 0 0 16px"
