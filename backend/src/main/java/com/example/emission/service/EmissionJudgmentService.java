@@ -4,8 +4,10 @@ import com.example.emission.dto.EnvironmentalJudgmentResult;
 import com.example.emission.dto.EnvironmentalJudgmentResult.ExceededItem;
 import com.example.emission.model.EmissionStandard;
 import com.example.emission.model.InspectionRecord;
+import com.example.emission.model.PollutantLimitRule;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,14 +17,43 @@ public class EmissionJudgmentService {
 
     private static final Logger log = LoggerFactory.getLogger(EmissionJudgmentService.class);
 
-    public EnvironmentalJudgmentResult judge(InspectionRecord record, String emissionStandardLabel) {
-        EmissionStandard standard = EmissionStandard.fromLabel(emissionStandardLabel);
+    private final DemoDataService demoDataService;
+
+    public EmissionJudgmentService(DemoDataService demoDataService) {
+        this.demoDataService = demoDataService;
+    }
+
+    public EnvironmentalJudgmentResult judge(InspectionRecord record, String fuelType, String emissionStandardLabel) {
+        double coLimit, hcLimit, noxLimit, opacityLimit;
+        String appliedStandard;
+        String resolvedFuelType = fuelType != null && !fuelType.isBlank() ? fuelType : "汽油";
+        String resolvedStandard = emissionStandardLabel != null && !emissionStandardLabel.isBlank() ? emissionStandardLabel : "国四";
+
+        Optional<PollutantLimitRule> ruleOpt = demoDataService.getPollutantLimitRule(resolvedFuelType, resolvedStandard);
+        if (ruleOpt.isPresent()) {
+            PollutantLimitRule rule = ruleOpt.get();
+            coLimit = rule.getCoLimit();
+            hcLimit = rule.getHcLimit();
+            noxLimit = rule.getNoxLimit();
+            opacityLimit = rule.getOpacityLimit();
+            appliedStandard = resolvedFuelType + "/" + resolvedStandard;
+            log.debug("使用污染物限值规则：fuelType={}, emissionStandard={}, coLimit={}, hcLimit={}, noxLimit={}, opacityLimit={}",
+                    resolvedFuelType, resolvedStandard, coLimit, hcLimit, noxLimit, opacityLimit);
+        } else {
+            log.warn("未找到匹配的污染物限值规则：fuelType={}, emissionStandard={}，使用默认枚举", resolvedFuelType, resolvedStandard);
+            EmissionStandard standard = EmissionStandard.fromLabel(resolvedStandard);
+            coLimit = standard.getCoLimit();
+            hcLimit = standard.getHcLimit();
+            noxLimit = standard.getNoxLimit();
+            opacityLimit = standard.getOpacityLimit();
+            appliedStandard = standard.getLabel() + "(默认)";
+        }
 
         List<ExceededItem> exceededItems = new ArrayList<>();
-        checkExceedance(exceededItems, "CO", record.getCoValue(), standard.getCoLimit());
-        checkExceedance(exceededItems, "HC", record.getHcValue(), standard.getHcLimit());
-        checkExceedance(exceededItems, "NOx", record.getNoxValue(), standard.getNoxLimit());
-        checkExceedance(exceededItems, "烟度", record.getOpacityValue(), standard.getOpacityLimit());
+        checkExceedance(exceededItems, "CO", record.getCoValue(), coLimit);
+        checkExceedance(exceededItems, "HC", record.getHcValue(), hcLimit);
+        checkExceedance(exceededItems, "NOx", record.getNoxValue(), noxLimit);
+        checkExceedance(exceededItems, "烟度", record.getOpacityValue(), opacityLimit);
 
         String environmentalStatus;
         String statusLevel;
@@ -69,20 +100,31 @@ public class EmissionJudgmentService {
             suggestion = "检测结论为不合格，但排放数值在限值范围内，建议人工复核确认。";
         }
 
-        log.debug("环保状态判定完成：record={}, status={}, level={}, exceeded={}",
-                record.getInspectionNo(), environmentalStatus, statusLevel, exceededItems.size());
+        log.debug("环保状态判定完成：record={}, fuelType={}, standard={}, status={}, level={}, exceeded={}",
+                record.getInspectionNo(), resolvedFuelType, resolvedStandard, environmentalStatus, statusLevel, exceededItems.size());
 
-        return new EnvironmentalJudgmentResult(
+        EnvironmentalJudgmentResult result = new EnvironmentalJudgmentResult(
                 environmentalStatus,
                 statusLevel,
                 exceededItems,
                 suggestion,
-                standard.getLabel()
+                appliedStandard
         );
+        result.setFuelType(resolvedFuelType);
+        result.setEmissionStandard(resolvedStandard);
+        result.setCoLimit(coLimit);
+        result.setHcLimit(hcLimit);
+        result.setNoxLimit(noxLimit);
+        result.setOpacityLimit(opacityLimit);
+        return result;
+    }
+
+    public EnvironmentalJudgmentResult judge(InspectionRecord record, String emissionStandardLabel) {
+        return judge(record, null, emissionStandardLabel);
     }
 
     public EnvironmentalJudgmentResult judge(InspectionRecord record) {
-        return judge(record, null);
+        return judge(record, null, null);
     }
 
     private void checkExceedance(List<ExceededItem> items, String pollutant,

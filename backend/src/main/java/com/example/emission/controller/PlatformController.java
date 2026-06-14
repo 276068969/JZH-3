@@ -8,6 +8,7 @@ import com.example.emission.dto.WarningHandleRequest;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
+import com.example.emission.model.PollutantLimitRule;
 import com.example.emission.model.Station;
 import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
@@ -178,5 +179,61 @@ public class PlatformController {
   @GetMapping("/warnings/inspections")
   public List<InspectionRecord> warningInspections(@RequestParam String plateNumber) {
     return demoDataService.getInspectionsByPlate(plateNumber);
+  }
+
+  @GetMapping("/pollutant-limit-rules/list")
+  public Map<String, Object> pollutantLimitRuleList(
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer pageSize,
+      @RequestParam(required = false) String fuelType,
+      @RequestParam(required = false) String emissionStandard,
+      @RequestParam(required = false) String status) {
+    return demoDataService.getPollutantLimitRuleList(page, pageSize, fuelType, emissionStandard, status);
+  }
+
+  @GetMapping("/pollutant-limit-rules/all")
+  public List<PollutantLimitRule> allPollutantLimitRules() {
+    return demoDataService.getAllPollutantLimitRules();
+  }
+
+  @GetMapping("/pollutant-limit-rules/detail")
+  public ResponseEntity<PollutantLimitRule> pollutantLimitRuleDetail(@RequestParam Long id) {
+    return demoDataService.getPollutantLimitRuleById(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @GetMapping("/pollutant-limit-rules/query")
+  public ResponseEntity<PollutantLimitRule> queryPollutantLimitRule(
+      @RequestParam String fuelType,
+      @RequestParam String emissionStandard) {
+    return demoDataService.getPollutantLimitRule(fuelType, emissionStandard)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @PostMapping("/pollutant-limit-rules/create")
+  public Map<String, Object> createPollutantLimitRule(@RequestBody PollutantLimitRule rule) {
+    return demoDataService.createPollutantLimitRule(rule);
+  }
+
+  @PostMapping("/pollutant-limit-rules/update")
+  public Map<String, Object> updatePollutantLimitRule(@RequestBody PollutantLimitRule rule) {
+    return demoDataService.updatePollutantLimitRule(rule);
+  }
+
+  @PostMapping("/pollutant-limit-rules/delete")
+  public Map<String, Object> deletePollutantLimitRule(@RequestParam Long id) {
+    return demoDataService.deletePollutantLimitRule(id);
+  }
+
+  @GetMapping("/pollutant-limit-rules/fuel-types")
+  public List<String> fuelTypes() {
+    return demoDataService.getAllFuelTypes();
+  }
+
+  @GetMapping("/pollutant-limit-rules/emission-standards")
+  public List<String> emissionStandards() {
+    return demoDataService.getAllEmissionStandards();
   }
 }

@@ -10,9 +10,11 @@ import com.example.emission.dto.ErrorCode;
 import com.example.emission.dto.StationStatus;
 import com.example.emission.dto.WarningHandleRequest;
 import com.example.emission.mapper.AnnouncementMapper;
+import com.example.emission.mapper.PollutantLimitRuleMapper;
 import com.example.emission.model.Announcement;
 import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
+import com.example.emission.model.PollutantLimitRule;
 import com.example.emission.model.Station;
 import com.example.emission.model.UserAccount;
 import com.example.emission.model.Vehicle;
@@ -56,13 +58,36 @@ public class DemoDataService {
           + "INDEX idx_publish_time (publish_time)"
           + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
+  private static final String CREATE_POLLUTANT_LIMIT_RULE_TABLE_SQL =
+      "CREATE TABLE IF NOT EXISTS pollutant_limit_rules ("
+          + "id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '规则ID', "
+          + "fuel_type VARCHAR(32) NOT NULL COMMENT '燃料类型', "
+          + "emission_standard VARCHAR(32) NOT NULL COMMENT '排放标准', "
+          + "co_limit DECIMAL(8,3) NOT NULL COMMENT 'CO限值', "
+          + "hc_limit DECIMAL(8,3) NOT NULL COMMENT 'HC限值', "
+          + "nox_limit DECIMAL(8,3) NOT NULL COMMENT 'NOx限值', "
+          + "opacity_limit DECIMAL(8,3) NOT NULL COMMENT '烟度限值', "
+          + "status VARCHAR(32) NOT NULL DEFAULT '启用' COMMENT '状态', "
+          + "remark VARCHAR(512) COMMENT '备注', "
+          + "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "
+          + "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间', "
+          + "UNIQUE KEY uk_fuel_standard (fuel_type, emission_standard), "
+          + "INDEX idx_fuel_type (fuel_type), "
+          + "INDEX idx_emission_standard (emission_standard), "
+          + "INDEX idx_status (status)"
+          + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
   private final AnnouncementMapper announcementMapper;
+  private final PollutantLimitRuleMapper pollutantLimitRuleMapper;
   private final JdbcTemplate jdbcTemplate;
   private final EmissionJudgmentService emissionJudgmentService;
 
-  public DemoDataService(AnnouncementMapper announcementMapper, JdbcTemplate jdbcTemplate,
+  public DemoDataService(AnnouncementMapper announcementMapper,
+                          PollutantLimitRuleMapper pollutantLimitRuleMapper,
+                          JdbcTemplate jdbcTemplate,
                           EmissionJudgmentService emissionJudgmentService) {
     this.announcementMapper = announcementMapper;
+    this.pollutantLimitRuleMapper = pollutantLimitRuleMapper;
     this.jdbcTemplate = jdbcTemplate;
     this.emissionJudgmentService = emissionJudgmentService;
   }
@@ -76,9 +101,19 @@ public class DemoDataService {
     }
   }
 
+  private void ensurePollutantLimitRuleTableExists() {
+    try {
+      jdbcTemplate.execute(CREATE_POLLUTANT_LIMIT_RULE_TABLE_SQL);
+      log.info("污染物限值规则表检查/创建完成");
+    } catch (Exception e) {
+      log.warn("污染物限值规则表创建/检查失败：{}", e.getMessage());
+    }
+  }
+
   @PostConstruct
   public void initAnnouncementData() {
     ensureAnnouncementTableExists();
+    ensurePollutantLimitRuleTableExists();
     try {
       Long count = announcementMapper.selectCount(null);
       if (count == null || count == 0) {
@@ -123,6 +158,50 @@ public class DemoDataService {
     } catch (Exception e) {
       log.warn("公告数据初始化失败（数据库可能未就绪）：{}", e.getMessage());
     }
+
+    try {
+      Long ruleCount = pollutantLimitRuleMapper.selectCount(null);
+      if (ruleCount == null || ruleCount == 0) {
+        log.info("污染物限值规则表为空，开始初始化示例规则数据...");
+        List<PollutantLimitRule> rules = List.of(
+            createLimitRule("汽油", "国六", 0.3, 30.0, 70.0, 0.25, "启用", "汽油车国六排放标准限值"),
+            createLimitRule("汽油", "国五", 0.5, 50.0, 90.0, 0.35, "启用", "汽油车国五排放标准限值"),
+            createLimitRule("汽油", "国四", 0.8, 80.0, 120.0, 0.50, "启用", "汽油车国四排放标准限值"),
+            createLimitRule("柴油", "国六", 0.4, 40.0, 80.0, 0.20, "启用", "柴油车国六排放标准限值"),
+            createLimitRule("柴油", "国五", 0.6, 60.0, 100.0, 0.30, "启用", "柴油车国五排放标准限值"),
+            createLimitRule("柴油", "国四", 0.9, 90.0, 130.0, 0.45, "启用", "柴油车国四排放标准限值"),
+            createLimitRule("混合动力", "国六", 0.25, 25.0, 60.0, 0.20, "启用", "混合动力车国六排放标准限值"),
+            createLimitRule("混合动力", "国五", 0.45, 45.0, 85.0, 0.30, "启用", "混合动力车国五排放标准限值"),
+            createLimitRule("混合动力", "国四", 0.75, 75.0, 110.0, 0.45, "启用", "混合动力车国四排放标准限值")
+        );
+        for (PollutantLimitRule r : rules) {
+          pollutantLimitRuleMapper.insert(r);
+        }
+        log.info("污染物限值规则示例数据初始化完成，共插入 {} 条", rules.size());
+      } else {
+        log.info("污染物限值规则表已有数据（{} 条），跳过初始化", ruleCount);
+      }
+    } catch (Exception e) {
+      log.warn("污染物限值规则数据初始化失败（数据库可能未就绪）：{}", e.getMessage());
+    }
+  }
+
+  private PollutantLimitRule createLimitRule(String fuelType, String emissionStandard,
+                                              double coLimit, double hcLimit, double noxLimit,
+                                              double opacityLimit, String status, String remark) {
+    PollutantLimitRule r = new PollutantLimitRule();
+    r.setFuelType(fuelType);
+    r.setEmissionStandard(emissionStandard);
+    r.setCoLimit(coLimit);
+    r.setHcLimit(hcLimit);
+    r.setNoxLimit(noxLimit);
+    r.setOpacityLimit(opacityLimit);
+    r.setStatus(status);
+    r.setRemark(remark);
+    String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    r.setCreateTime(now);
+    r.setUpdateTime(now);
+    return r;
   }
 
   private Announcement createAnnouncementEntity(String title, String content, String type,
@@ -919,5 +998,228 @@ public class DemoDataService {
     warningRecords.add(warning);
     log.info("环保状态判定自动生成预警：plateNumber={}, status={}, level={}",
             record.getPlateNumber(), judgment.getEnvironmentalStatus(), judgment.getStatusLevel());
+  }
+
+  public Map<String, Object> getPollutantLimitRuleList(Integer page, Integer pageSize,
+                                                      String fuelType, String emissionStandard, String status) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      int current = page != null && page > 0 ? page : 1;
+      int size = pageSize != null && pageSize > 0 ? pageSize : 10;
+
+      LambdaQueryWrapper<PollutantLimitRule> wrapper = new LambdaQueryWrapper<>();
+      if (fuelType != null && !fuelType.isBlank()) {
+        wrapper.eq(PollutantLimitRule::getFuelType, fuelType.trim());
+      }
+      if (emissionStandard != null && !emissionStandard.isBlank()) {
+        wrapper.eq(PollutantLimitRule::getEmissionStandard, emissionStandard.trim());
+      }
+      if (status != null && !status.isBlank()) {
+        wrapper.eq(PollutantLimitRule::getStatus, status.trim());
+      }
+      wrapper.orderByDesc(PollutantLimitRule::getUpdateTime);
+
+      IPage<PollutantLimitRule> pageResult = pollutantLimitRuleMapper.selectPage(new Page<>(current, size), wrapper);
+
+      return Map.of(
+          "total", pageResult.getTotal(),
+          "page", current,
+          "pageSize", size,
+          "records", pageResult.getRecords()
+      );
+    } catch (Exception e) {
+      log.error("分页查询污染物限值规则失败", e);
+      return Map.of("total", 0L, "page", page != null ? page : 1, "pageSize", pageSize != null ? pageSize : 10, "records", List.of());
+    }
+  }
+
+  public List<PollutantLimitRule> getAllPollutantLimitRules() {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      LambdaQueryWrapper<PollutantLimitRule> wrapper = new LambdaQueryWrapper<>();
+      wrapper.eq(PollutantLimitRule::getStatus, "启用")
+          .orderByAsc(PollutantLimitRule::getFuelType)
+          .orderByAsc(PollutantLimitRule::getEmissionStandard);
+      return pollutantLimitRuleMapper.selectList(wrapper);
+    } catch (Exception e) {
+      log.error("查询所有启用的污染物限值规则失败", e);
+      return List.of();
+    }
+  }
+
+  public Optional<PollutantLimitRule> getPollutantLimitRuleById(Long id) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      return Optional.ofNullable(pollutantLimitRuleMapper.selectById(id));
+    } catch (Exception e) {
+      log.error("根据ID查询污染物限值规则失败: id={}", id, e);
+      return Optional.empty();
+    }
+  }
+
+  public Optional<PollutantLimitRule> getPollutantLimitRule(String fuelType, String emissionStandard) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      if (fuelType == null || fuelType.isBlank() || emissionStandard == null || emissionStandard.isBlank()) {
+        return Optional.empty();
+      }
+      LambdaQueryWrapper<PollutantLimitRule> wrapper = new LambdaQueryWrapper<>();
+      wrapper.eq(PollutantLimitRule::getFuelType, fuelType.trim())
+          .eq(PollutantLimitRule::getEmissionStandard, emissionStandard.trim())
+          .eq(PollutantLimitRule::getStatus, "启用");
+      return Optional.ofNullable(pollutantLimitRuleMapper.selectOne(wrapper));
+    } catch (Exception e) {
+      log.error("根据燃料类型和排放标准查询污染物限值规则失败: fuelType={}, emissionStandard={}", fuelType, emissionStandard, e);
+      return Optional.empty();
+    }
+  }
+
+  public synchronized Map<String, Object> createPollutantLimitRule(PollutantLimitRule rule) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      if (rule.getFuelType() == null || rule.getFuelType().isBlank()) {
+        return Map.of("success", false, "message", "燃料类型不能为空");
+      }
+      if (rule.getEmissionStandard() == null || rule.getEmissionStandard().isBlank()) {
+        return Map.of("success", false, "message", "排放标准不能为空");
+      }
+      if (rule.getCoLimit() == null || rule.getCoLimit() < 0) {
+        return Map.of("success", false, "message", "CO限值不能为负数");
+      }
+      if (rule.getHcLimit() == null || rule.getHcLimit() < 0) {
+        return Map.of("success", false, "message", "HC限值不能为负数");
+      }
+      if (rule.getNoxLimit() == null || rule.getNoxLimit() < 0) {
+        return Map.of("success", false, "message", "NOx限值不能为负数");
+      }
+      if (rule.getOpacityLimit() == null || rule.getOpacityLimit() < 0) {
+        return Map.of("success", false, "message", "烟度限值不能为负数");
+      }
+
+      LambdaQueryWrapper<PollutantLimitRule> checkWrapper = new LambdaQueryWrapper<>();
+      checkWrapper.eq(PollutantLimitRule::getFuelType, rule.getFuelType().trim())
+          .eq(PollutantLimitRule::getEmissionStandard, rule.getEmissionStandard().trim());
+      Long existingCount = pollutantLimitRuleMapper.selectCount(checkWrapper);
+      if (existingCount != null && existingCount > 0) {
+        return Map.of("success", false, "message", "该燃料类型和排放标准的规则已存在");
+      }
+
+      String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+      rule.setFuelType(rule.getFuelType().trim());
+      rule.setEmissionStandard(rule.getEmissionStandard().trim());
+      if (rule.getStatus() == null || rule.getStatus().isBlank()) {
+        rule.setStatus("启用");
+      }
+      rule.setCreateTime(now);
+      rule.setUpdateTime(now);
+
+      int rows = pollutantLimitRuleMapper.insert(rule);
+      if (rows > 0) {
+        return Map.of(
+            "success", true,
+            "message", "污染物限值规则创建成功",
+            "record", rule
+        );
+      } else {
+        return Map.of("success", false, "message", "污染物限值规则创建失败");
+      }
+    } catch (Exception e) {
+      log.error("创建污染物限值规则失败", e);
+      return Map.of("success", false, "message", "污染物限值规则创建失败：" + e.getMessage());
+    }
+  }
+
+  public synchronized Map<String, Object> updatePollutantLimitRule(PollutantLimitRule rule) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      if (rule.getId() == null) {
+        return Map.of("success", false, "message", "规则ID不能为空");
+      }
+      PollutantLimitRule existing = pollutantLimitRuleMapper.selectById(rule.getId());
+      if (existing == null) {
+        return Map.of("success", false, "message", "污染物限值规则不存在");
+      }
+
+      String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+      if (rule.getFuelType() != null) {
+        existing.setFuelType(rule.getFuelType().trim());
+      }
+      if (rule.getEmissionStandard() != null) {
+        existing.setEmissionStandard(rule.getEmissionStandard().trim());
+      }
+      if (rule.getCoLimit() != null) {
+        if (rule.getCoLimit() < 0) {
+          return Map.of("success", false, "message", "CO限值不能为负数");
+        }
+        existing.setCoLimit(rule.getCoLimit());
+      }
+      if (rule.getHcLimit() != null) {
+        if (rule.getHcLimit() < 0) {
+          return Map.of("success", false, "message", "HC限值不能为负数");
+        }
+        existing.setHcLimit(rule.getHcLimit());
+      }
+      if (rule.getNoxLimit() != null) {
+        if (rule.getNoxLimit() < 0) {
+          return Map.of("success", false, "message", "NOx限值不能为负数");
+        }
+        existing.setNoxLimit(rule.getNoxLimit());
+      }
+      if (rule.getOpacityLimit() != null) {
+        if (rule.getOpacityLimit() < 0) {
+          return Map.of("success", false, "message", "烟度限值不能为负数");
+        }
+        existing.setOpacityLimit(rule.getOpacityLimit());
+      }
+      if (rule.getStatus() != null && !rule.getStatus().isBlank()) {
+        existing.setStatus(rule.getStatus().trim());
+      }
+      if (rule.getRemark() != null) {
+        existing.setRemark(rule.getRemark());
+      }
+      existing.setUpdateTime(now);
+
+      int rows = pollutantLimitRuleMapper.updateById(existing);
+      if (rows > 0) {
+        return Map.of(
+            "success", true,
+            "message", "污染物限值规则更新成功",
+            "record", existing
+        );
+      } else {
+        return Map.of("success", false, "message", "污染物限值规则更新失败");
+      }
+    } catch (Exception e) {
+      log.error("更新污染物限值规则失败", e);
+      return Map.of("success", false, "message", "污染物限值规则更新失败：" + e.getMessage());
+    }
+  }
+
+  public synchronized Map<String, Object> deletePollutantLimitRule(Long id) {
+    ensurePollutantLimitRuleTableExists();
+    try {
+      PollutantLimitRule existing = pollutantLimitRuleMapper.selectById(id);
+      if (existing == null) {
+        return Map.of("success", false, "message", "污染物限值规则不存在");
+      }
+      int rows = pollutantLimitRuleMapper.deleteById(id);
+      if (rows > 0) {
+        return Map.of("success", true, "message", "污染物限值规则删除成功");
+      } else {
+        return Map.of("success", false, "message", "污染物限值规则删除失败");
+      }
+    } catch (Exception e) {
+      log.error("删除污染物限值规则失败: id={}", id, e);
+      return Map.of("success", false, "message", "污染物限值规则删除失败：" + e.getMessage());
+    }
+  }
+
+  public List<String> getAllFuelTypes() {
+    return List.of("汽油", "柴油", "混合动力", "天然气", "纯电动");
+  }
+
+  public List<String> getAllEmissionStandards() {
+    return List.of("国六", "国五", "国四", "国三", "国二");
   }
 }

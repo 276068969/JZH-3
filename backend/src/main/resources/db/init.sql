@@ -64,3 +64,21 @@ CREATE TABLE IF NOT EXISTS announcements (
   INDEX idx_type (type),
   INDEX idx_publish_time (publish_time)
 );
+
+CREATE TABLE IF NOT EXISTS pollutant_limit_rules (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '规则ID',
+  fuel_type VARCHAR(32) NOT NULL COMMENT '燃料类型：汽油、柴油、混合动力等',
+  emission_standard VARCHAR(32) NOT NULL COMMENT '排放标准：国四、国五、国六等',
+  co_limit DECIMAL(8,3) NOT NULL COMMENT 'CO限值 (%)',
+  hc_limit DECIMAL(8,3) NOT NULL COMMENT 'HC限值 (ppm)',
+  nox_limit DECIMAL(8,3) NOT NULL COMMENT 'NOx限值 (ppm)',
+  opacity_limit DECIMAL(8,3) NOT NULL COMMENT '烟度限值 (m-1)',
+  status VARCHAR(32) NOT NULL DEFAULT '启用' COMMENT '状态：启用、停用',
+  remark VARCHAR(512) COMMENT '备注',
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY uk_fuel_standard (fuel_type, emission_standard),
+  INDEX idx_fuel_type (fuel_type),
+  INDEX idx_emission_standard (emission_standard),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='污染物限值规则表';
