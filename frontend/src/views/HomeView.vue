@@ -139,7 +139,7 @@
           </el-select>
           <el-button type="primary" @click="queryStations">查询</el-button>
         </div>
-        <el-table :data="stations" border>
+        <el-table :data="stations" border @row-click="handleStationClick" style="cursor: pointer">
           <el-table-column prop="name" label="检测站" min-width="160" />
           <el-table-column prop="district" label="辖区" width="120" />
           <el-table-column prop="address" label="地址" min-width="220" />
@@ -151,9 +151,18 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link @click.stop="handleStationClick(row)">
+                详情
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
     </section>
+
+    <StationDetailDrawer v-model="drawerVisible" :station="currentStationStatus" />
   </main>
 </template>
 
@@ -161,15 +170,18 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import StationDetailDrawer from '@/components/StationDetailDrawer.vue'
 import {
   fetchAnnouncements,
   fetchInspections,
   fetchStations,
+  fetchStationStatuses,
   searchVehicle,
   type Announcement,
   type ApiResponse,
   type InspectionRecord,
   type Station,
+  type StationStatus,
   type Vehicle
 } from '@/api/platform'
 
@@ -181,11 +193,14 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const stations = ref<Station[]>([])
+const stationStatuses = ref<StationStatus[]>([])
 const announcements = ref<Announcement[]>([])
 const stationSection = ref<HTMLElement | null>(null)
 const stationDistrict = ref('')
 const stationStatus = ref('')
 const districtOptions = ref<string[]>([])
+const drawerVisible = ref(false)
+const currentStationStatus = ref<StationStatus | null>(null)
 
 const normalizeKeyword = (raw: string | null | undefined): string => {
   if (!raw) return ''
@@ -302,6 +317,37 @@ const loadStations = async () => {
   }
 }
 
+const loadStationStatuses = async () => {
+  try {
+    const { data } = await fetchStationStatuses()
+    stationStatuses.value = data
+  } catch {
+    ElMessage.warning('检测站状态加载失败')
+  }
+}
+
+const handleStationClick = (row: Station) => {
+  const status = stationStatuses.value.find(s => s.stationId === row.id)
+  if (status) {
+    currentStationStatus.value = status
+  } else {
+    currentStationStatus.value = {
+      stationId: row.id,
+      stationName: row.name,
+      district: row.district,
+      address: row.address,
+      phone: row.phone,
+      todayInspectionCount: 0,
+      passedCount: 0,
+      failedCount: 0,
+      passRate: 0,
+      lastInspectionTime: '',
+      runningStatus: row.status === '正常' ? '空闲' : '停运'
+    }
+  }
+  drawerVisible.value = true
+}
+
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return ''
   if (dateStr.includes(' ')) {
@@ -317,7 +363,7 @@ const viewReportDetail = (row: InspectionRecord) => {
 onMounted(async () => {
   const [announcementResp] = await Promise.all([fetchAnnouncements()])
   announcements.value = announcementResp.data
-  await loadStations()
+  await Promise.all([loadStations(), loadStationStatuses()])
   await queryVehicle()
 })
 </script>

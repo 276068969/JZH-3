@@ -59,6 +59,20 @@ export interface Station {
   status: string
 }
 
+export interface StationStatus {
+  stationId: number
+  stationName: string
+  district: string
+  address: string
+  phone: string
+  todayInspectionCount: number
+  passedCount: number
+  failedCount: number
+  passRate: number
+  lastInspectionTime: string
+  runningStatus: string
+}
+
 export interface Announcement {
   id: number
   title: string
@@ -110,6 +124,9 @@ export const fetchInspectionDetail = (inspectionNo: string) =>
 
 export const fetchStations = (district?: string, status?: string) =>
   http.get<Station[]>('/stations', { params: { district, status } })
+
+export const fetchStationStatuses = () =>
+  http.get<StationStatus[]>('/stations/status')
 
 export const fetchAnnouncements = () => http.get<Announcement[]>('/announcements')
 
