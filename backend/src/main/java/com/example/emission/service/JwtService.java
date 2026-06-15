@@ -1,6 +1,8 @@
 package com.example.emission.service;
 
 import com.example.emission.model.UserAccount;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
@@ -33,5 +35,31 @@ public class JwtService {
         .expiration(Date.from(now.plusSeconds(expireHours * 3600)))
         .signWith(secretKey)
         .compact();
+  }
+
+  public Claims parseToken(String token) {
+    return Jwts.parser()
+        .verifyWith(secretKey)
+        .build()
+        .parseSignedClaims(token)
+        .getPayload();
+  }
+
+  public boolean validate(String token) {
+    try {
+      parseToken(token);
+      return true;
+    } catch (JwtException | IllegalArgumentException e) {
+      return false;
+    }
+  }
+
+  public UserAccount extractUser(String token) {
+    Claims claims = parseToken(token);
+    return new UserAccount(
+        claims.getSubject(),
+        claims.get("role", String.class),
+        claims.get("displayName", String.class)
+    );
   }
 }

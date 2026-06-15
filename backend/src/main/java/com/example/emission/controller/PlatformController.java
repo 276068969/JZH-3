@@ -10,6 +10,7 @@ import com.example.emission.model.AuditRecord;
 import com.example.emission.model.InspectionRecord;
 import com.example.emission.model.PollutantLimitRule;
 import com.example.emission.model.Station;
+import com.example.emission.model.UserAccount;
 import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
 import com.example.emission.service.DemoDataService;
@@ -17,6 +18,7 @@ import com.example.emission.service.EmissionJudgmentService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,7 +38,15 @@ public class PlatformController {
     this.emissionJudgmentService = emissionJudgmentService;
   }
 
+  private String resolveUsername(Authentication authentication) {
+    if (authentication != null && authentication.getDetails() instanceof UserAccount user) {
+      return user.displayName();
+    }
+    return "system";
+  }
+
   @GetMapping("/dashboard")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public Map<String, Object> dashboard(@RequestParam(required = false, defaultValue = "7") Integer days) {
     return demoDataService.dashboard(days);
   }
@@ -47,23 +57,25 @@ public class PlatformController {
   }
 
   @GetMapping("/inspections")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public List<InspectionRecord> inspections(@RequestParam(required = false) String plateNumber) {
     return demoDataService.inspections(plateNumber);
   }
 
   @PostMapping("/inspections/audit")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public Map<String, Object> audit(@RequestBody AuditRequest request, Authentication authentication) {
-    String auditor = authentication != null ? authentication.getName() : "system";
-    return demoDataService.audit(request, auditor);
+    return demoDataService.audit(request, resolveUsername(authentication));
   }
 
   @PostMapping("/inspections/create")
+  @PreAuthorize("hasAnyRole('平台管理员', '检测站工作人员')")
   public Map<String, Object> createInspection(@RequestBody InspectionRecord record, Authentication authentication) {
-    String operator = authentication != null ? authentication.getName() : "station";
-    return demoDataService.createInspection(record, operator);
+    return demoDataService.createInspection(record, resolveUsername(authentication));
   }
 
   @PostMapping("/inspections/judge")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatus(
           @RequestBody InspectionRecord record,
           @RequestParam(required = false) String fuelType,
@@ -73,6 +85,7 @@ public class PlatformController {
   }
 
   @GetMapping("/inspections/judge")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatusByNo(
           @RequestParam String inspectionNo,
           @RequestParam(required = false) String fuelType,
@@ -83,6 +96,7 @@ public class PlatformController {
   }
 
   @GetMapping("/inspections/detail")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public ResponseEntity<InspectionRecord> inspectionDetail(@RequestParam String inspectionNo) {
     return demoDataService.getInspectionDetail(inspectionNo)
         .map(ResponseEntity::ok)
@@ -90,11 +104,13 @@ public class PlatformController {
   }
 
   @GetMapping("/inspections/audit-records")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public List<AuditRecord> auditRecords(@RequestParam String inspectionNo) {
     return demoDataService.getAuditRecords(inspectionNo);
   }
 
   @GetMapping("/stations")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<Station> stations(
       @RequestParam(required = false) String district,
       @RequestParam(required = false) String status) {
@@ -102,6 +118,7 @@ public class PlatformController {
   }
 
   @GetMapping("/stations/status")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<StationStatus> stationStatuses() {
     return demoDataService.stationStatuses();
   }
@@ -132,40 +149,43 @@ public class PlatformController {
   }
 
   @PostMapping("/announcements/create")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> createAnnouncement(@RequestBody Announcement announcement, Authentication authentication) {
-    String operator = authentication != null ? authentication.getName() : "system";
-    return demoDataService.createAnnouncement(announcement, operator);
+    return demoDataService.createAnnouncement(announcement, resolveUsername(authentication));
   }
 
   @PostMapping("/announcements/update")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> updateAnnouncement(@RequestBody Announcement announcement, Authentication authentication) {
-    String operator = authentication != null ? authentication.getName() : "system";
-    return demoDataService.updateAnnouncement(announcement, operator);
+    return demoDataService.updateAnnouncement(announcement, resolveUsername(authentication));
   }
 
   @PostMapping("/announcements/delete")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> deleteAnnouncement(@RequestParam Long id) {
     return demoDataService.deleteAnnouncement(id);
   }
 
   @PostMapping("/announcements/publish")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> publishAnnouncement(@RequestParam Long id, Authentication authentication) {
-    String operator = authentication != null ? authentication.getName() : "system";
-    return demoDataService.publishAnnouncement(id, operator);
+    return demoDataService.publishAnnouncement(id, resolveUsername(authentication));
   }
 
   @PostMapping("/announcements/offline")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> offlineAnnouncement(@RequestParam Long id, Authentication authentication) {
-    String operator = authentication != null ? authentication.getName() : "system";
-    return demoDataService.offlineAnnouncement(id, operator);
+    return demoDataService.offlineAnnouncement(id, resolveUsername(authentication));
   }
 
   @GetMapping("/warnings")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<WarningRecord> warnings() {
     return demoDataService.warnings();
   }
 
   @GetMapping("/warnings/detail")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public ResponseEntity<WarningRecord> warningDetail(@RequestParam Long id) {
     return demoDataService.getWarningById(id)
         .map(ResponseEntity::ok)
@@ -173,17 +193,19 @@ public class PlatformController {
   }
 
   @PostMapping("/warnings/handle")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public Map<String, Object> handleWarning(@RequestBody WarningHandleRequest request, Authentication authentication) {
-    String handler = authentication != null ? authentication.getName() : "system";
-    return demoDataService.handleWarning(request, handler);
+    return demoDataService.handleWarning(request, resolveUsername(authentication));
   }
 
   @GetMapping("/warnings/inspections")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<InspectionRecord> warningInspections(@RequestParam String plateNumber) {
     return demoDataService.getInspectionsByPlate(plateNumber);
   }
 
   @GetMapping("/pollutant-limit-rules/list")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public Map<String, Object> pollutantLimitRuleList(
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer pageSize,
@@ -194,11 +216,13 @@ public class PlatformController {
   }
 
   @GetMapping("/pollutant-limit-rules/all")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<PollutantLimitRule> allPollutantLimitRules() {
     return demoDataService.getAllPollutantLimitRules();
   }
 
   @GetMapping("/pollutant-limit-rules/detail")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public ResponseEntity<PollutantLimitRule> pollutantLimitRuleDetail(@RequestParam Long id) {
     return demoDataService.getPollutantLimitRuleById(id)
         .map(ResponseEntity::ok)
@@ -206,6 +230,7 @@ public class PlatformController {
   }
 
   @GetMapping("/pollutant-limit-rules/query")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public ResponseEntity<PollutantLimitRule> queryPollutantLimitRule(
       @RequestParam String fuelType,
       @RequestParam String emissionStandard) {
@@ -215,26 +240,31 @@ public class PlatformController {
   }
 
   @PostMapping("/pollutant-limit-rules/create")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> createPollutantLimitRule(@RequestBody PollutantLimitRule rule) {
     return demoDataService.createPollutantLimitRule(rule);
   }
 
   @PostMapping("/pollutant-limit-rules/update")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> updatePollutantLimitRule(@RequestBody PollutantLimitRule rule) {
     return demoDataService.updatePollutantLimitRule(rule);
   }
 
   @PostMapping("/pollutant-limit-rules/delete")
+  @PreAuthorize("hasRole('平台管理员')")
   public Map<String, Object> deletePollutantLimitRule(@RequestParam Long id) {
     return demoDataService.deletePollutantLimitRule(id);
   }
 
   @GetMapping("/pollutant-limit-rules/fuel-types")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<String> fuelTypes() {
     return demoDataService.getAllFuelTypes();
   }
 
   @GetMapping("/pollutant-limit-rules/emission-standards")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public List<String> emissionStandards() {
     return demoDataService.getAllEmissionStandards();
   }

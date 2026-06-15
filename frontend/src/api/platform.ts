@@ -144,6 +144,8 @@ export interface EnvironmentalJudgmentResult {
 export const login = (username: string, password: string) =>
   http.post('/auth/login', { username, password })
 
+export const fetchCurrentUser = () => http.get('/auth/me')
+
 export const fetchDashboard = (days?: number) => http.get('/dashboard', { params: days ? { days } : {} })
 
 export const searchVehicle = (keyword: string) =>
