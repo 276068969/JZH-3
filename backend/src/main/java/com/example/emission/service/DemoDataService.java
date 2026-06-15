@@ -1301,4 +1301,27 @@ public class DemoDataService {
     List<String> plateNumbers = userVehicleMap.get(username);
     return plateNumbers != null && plateNumbers.contains(plateNumber.trim());
   }
+
+  public boolean canAccessInspection(String inspectionNo, String username) {
+    if (inspectionNo == null || inspectionNo.isBlank()) {
+      return false;
+    }
+    Optional<InspectionRecord> recordOpt = getInspectionDetail(inspectionNo);
+    if (recordOpt.isEmpty()) {
+      return false;
+    }
+    String plateNumber = recordOpt.get().getPlateNumber();
+    UserAccount user = users.get(username);
+    if (user != null && ("平台管理员".equals(user.role()) || "监管人员".equals(user.role()) || "检测站工作人员".equals(user.role()))) {
+      return true;
+    }
+    return isUserOwnVehicle(username, plateNumber);
+  }
+
+  public Optional<InspectionRecord> getInspectionDetailAccessible(String inspectionNo, String username) {
+    if (!canAccessInspection(inspectionNo, username)) {
+      return Optional.empty();
+    }
+    return getInspectionDetail(inspectionNo);
+  }
 }

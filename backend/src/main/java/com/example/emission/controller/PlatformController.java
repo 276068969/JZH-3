@@ -112,27 +112,38 @@ public class PlatformController {
   }
 
   @GetMapping("/inspections/judge")
-  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public ResponseEntity<EnvironmentalJudgmentResult> judgeEnvironmentalStatusByNo(
           @RequestParam String inspectionNo,
           @RequestParam(required = false) String fuelType,
-          @RequestParam(required = false) String emissionStandard) {
+          @RequestParam(required = false) String emissionStandard,
+          Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    if (!demoDataService.canAccessInspection(inspectionNo, username)) {
+      return ResponseEntity.notFound().build();
+    }
     return demoDataService.getInspectionDetail(inspectionNo)
         .map(record -> ResponseEntity.ok(emissionJudgmentService.judge(record, fuelType, emissionStandard)))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @GetMapping("/inspections/detail")
-  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
-  public ResponseEntity<InspectionRecord> inspectionDetail(@RequestParam String inspectionNo) {
-    return demoDataService.getInspectionDetail(inspectionNo)
+  public ResponseEntity<InspectionRecord> inspectionDetail(
+      @RequestParam String inspectionNo,
+      Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    return demoDataService.getInspectionDetailAccessible(inspectionNo, username)
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @GetMapping("/inspections/audit-records")
-  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
-  public List<AuditRecord> auditRecords(@RequestParam String inspectionNo) {
+  public List<AuditRecord> auditRecords(
+      @RequestParam String inspectionNo,
+      Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    if (!demoDataService.canAccessInspection(inspectionNo, username)) {
+      return List.of();
+    }
     return demoDataService.getAuditRecords(inspectionNo);
   }
 
@@ -257,7 +268,6 @@ public class PlatformController {
   }
 
   @GetMapping("/pollutant-limit-rules/query")
-  @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public ResponseEntity<PollutantLimitRule> queryPollutantLimitRule(
       @RequestParam String fuelType,
       @RequestParam String emissionStandard) {

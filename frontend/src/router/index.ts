@@ -40,7 +40,7 @@ const router = createRouter({
         roles: [UserRole.ADMIN, UserRole.REGULATOR, UserRole.STATION]
       }
     },
-    { path: '/report/:inspectionNo?', name: 'report-detail', component: InspectionReportDetail },
+    { path: '/report/:inspectionNo?', name: 'report-detail', component: InspectionReportDetail, meta: { requiresAuth: true } },
     { path: '/announcements', name: 'announcement-list', component: AnnouncementListView },
     { path: '/announcements/:id', name: 'announcement-detail', component: AnnouncementDetailView },
     { 
