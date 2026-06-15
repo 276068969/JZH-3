@@ -9,6 +9,11 @@
         <nav>
           <el-button text @click="router.push('/')">车辆查询</el-button>
           <el-button text @click="scrollToStations">检测站</el-button>
+          <template v-if="auth.isLoggedIn && auth.isUser">
+            <el-button type="primary" text @click="router.push('/vehicle-center')">
+              个人车辆中心
+            </el-button>
+          </template>
           <template v-if="auth.isLoggedIn && (auth.isAdmin || auth.isRegulator || auth.isStation)">
             <el-button text @click="router.push('/inspection-entry')">检测录入</el-button>
             <el-button type="primary" @click="goToAdmin">
@@ -251,7 +256,7 @@ const handleDropdownCommand = async (command: string) => {
       // 用户取消
     }
   } else if (command === 'profile') {
-    ElMessage.info('个人中心功能开发中')
+    router.push('/vehicle-center')
   }
 }
 const keyword = ref('京A12345')

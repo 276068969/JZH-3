@@ -7,6 +7,7 @@ import InspectionReportDetail from '@/views/InspectionReportDetail.vue'
 import WarningHandleView from '@/views/WarningHandleView.vue'
 import AnnouncementListView from '@/views/AnnouncementListView.vue'
 import AnnouncementDetailView from '@/views/AnnouncementDetailView.vue'
+import VehicleCenterView from '@/views/VehicleCenterView.vue'
 import { useAuthStore, UserRole } from '@/stores/auth'
 
 declare module 'vue-router' {
@@ -49,6 +50,14 @@ const router = createRouter({
       meta: { 
         requiresAuth: true,
         roles: [UserRole.ADMIN, UserRole.REGULATOR]
+      }
+    },
+    { 
+      path: '/vehicle-center', 
+      name: 'vehicle-center', 
+      component: VehicleCenterView,
+      meta: { 
+        requiresAuth: true
       }
     }
   ]

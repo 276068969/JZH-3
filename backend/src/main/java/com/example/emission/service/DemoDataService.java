@@ -226,9 +226,14 @@ public class DemoDataService {
   );
 
   private final List<Vehicle> vehicles = List.of(
-      new Vehicle("京A12345", "LHGCM82633A004352", "小型轿车", "汽油", "国六", "张先生", "2021-06-18", "合格"),
+      new Vehicle("京A12345", "LHGCM82633A004352", "小型轿车", "汽油", "国六", "车主用户", "2021-06-18", "合格"),
       new Vehicle("京B67890", "LSVNV2187N2039456", "轻型货车", "柴油", "国五", "北京绿运物流", "2019-03-12", "待复检"),
       new Vehicle("京C24680", "LFPH4ACC9N1A20458", "小型客车", "混合动力", "国六", "李女士", "2022-10-09", "合格")
+  );
+
+  private final Map<String, List<String>> userVehicleMap = Map.of(
+      "user", List.of("京A12345"),
+      "station", List.of("京B67890")
   );
 
   private final List<InspectionRecord> inspections = new ArrayList<>(List.of(
@@ -1225,5 +1230,75 @@ public class DemoDataService {
 
   public List<String> getAllEmissionStandards() {
     return List.of("国六", "国五", "国四", "国三", "国二");
+  }
+
+  public List<Vehicle> getUserVehicles(String username) {
+    if (username == null || username.isBlank()) {
+      return List.of();
+    }
+    List<String> plateNumbers = userVehicleMap.get(username);
+    if (plateNumbers == null || plateNumbers.isEmpty()) {
+      return List.of();
+    }
+    return vehicles.stream()
+        .filter(v -> plateNumbers.contains(v.plateNumber()))
+        .collect(Collectors.toList());
+  }
+
+  public Map<String, Object> getUserVehicleCenter(String username) {
+    List<Vehicle> userVehicles = getUserVehicles(username);
+
+    List<Map<String, Object>> vehicleInfoList = new ArrayList<>();
+    for (Vehicle v : userVehicles) {
+      List<InspectionRecord> vehicleInspections = getInspectionsByPlate(v.plateNumber());
+      InspectionRecord latest = vehicleInspections.isEmpty() ? null : vehicleInspections.get(0);
+
+      Map<String, Object> info = new java.util.LinkedHashMap<>();
+      info.put("vehicle", v);
+      info.put("inspectionCount", vehicleInspections.size());
+      info.put("latestInspection", latest);
+
+      long passedCount = vehicleInspections.stream().filter(r -> "合格".equals(r.getResult())).count();
+      long failedCount = vehicleInspections.size() - passedCount;
+      info.put("passedCount", (int) passedCount);
+      info.put("failedCount", (int) failedCount);
+
+      List<InspectionRecord> recentInspections = vehicleInspections.stream()
+          .limit(5)
+          .collect(Collectors.toList());
+      info.put("recentInspections", recentInspections);
+
+      vehicleInfoList.add(info);
+    }
+
+    int totalVehicles = userVehicles.size();
+    long qualifiedCount = userVehicles.stream().filter(v -> "合格".equals(v.environmentalStatus())).count();
+    long pendingCount = userVehicles.stream().filter(v -> "待复检".equals(v.environmentalStatus())).count();
+
+    return Map.of(
+        "totalVehicles", totalVehicles,
+        "qualifiedCount", (int) qualifiedCount,
+        "pendingCount", (int) pendingCount,
+        "vehicles", vehicleInfoList
+    );
+  }
+
+  public List<InspectionRecord> getUserVehicleInspections(String username, String plateNumber) {
+    if (username == null || plateNumber == null) {
+      return List.of();
+    }
+    List<String> plateNumbers = userVehicleMap.get(username);
+    if (plateNumbers == null || !plateNumbers.contains(plateNumber.trim())) {
+      return List.of();
+    }
+    return getInspectionsByPlate(plateNumber);
+  }
+
+  public boolean isUserOwnVehicle(String username, String plateNumber) {
+    if (username == null || plateNumber == null) {
+      return false;
+    }
+    List<String> plateNumbers = userVehicleMap.get(username);
+    return plateNumbers != null && plateNumbers.contains(plateNumber.trim());
   }
 }

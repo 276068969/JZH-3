@@ -40,6 +40,8 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/announcements/list").permitAll()
             .requestMatchers(HttpMethod.GET, "/announcements/detail").permitAll()
             .requestMatchers(HttpMethod.GET, "/vehicles/search").permitAll()
+            .requestMatchers(HttpMethod.GET, "/user/**").authenticated()
+            .requestMatchers(HttpMethod.GET, "/inspections/detail", "/inspections/judge", "/inspections/audit-records").authenticated()
             .requestMatchers(HttpMethod.GET, "/dashboard").hasAnyRole("平台管理员", "监管人员", "检测站工作人员")
             .requestMatchers(HttpMethod.GET, "/stations", "/stations/status").hasAnyRole("平台管理员", "监管人员")
             .requestMatchers(HttpMethod.GET, "/inspections/**").hasAnyRole("平台管理员", "监管人员", "检测站工作人员")

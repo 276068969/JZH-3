@@ -45,6 +45,13 @@ public class PlatformController {
     return "system";
   }
 
+  private String resolveUsernameFromAuth(Authentication authentication) {
+    if (authentication != null && authentication.getDetails() instanceof UserAccount user) {
+      return user.username();
+    }
+    return "";
+  }
+
   @GetMapping("/dashboard")
   @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public Map<String, Object> dashboard(@RequestParam(required = false, defaultValue = "7") Integer days) {
@@ -54,6 +61,26 @@ public class PlatformController {
   @GetMapping("/vehicles/search")
   public ApiResponse<Vehicle> searchVehicle(@RequestParam(required = false) String keyword) {
     return demoDataService.searchVehicleWithValidation(keyword);
+  }
+
+  @GetMapping("/user/vehicle-center")
+  public Map<String, Object> userVehicleCenter(Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    return demoDataService.getUserVehicleCenter(username);
+  }
+
+  @GetMapping("/user/vehicles")
+  public List<Vehicle> userVehicles(Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    return demoDataService.getUserVehicles(username);
+  }
+
+  @GetMapping("/user/vehicles/inspections")
+  public List<InspectionRecord> userVehicleInspections(
+      @RequestParam String plateNumber,
+      Authentication authentication) {
+    String username = resolveUsernameFromAuth(authentication);
+    return demoDataService.getUserVehicleInspections(username, plateNumber);
   }
 
   @GetMapping("/inspections")

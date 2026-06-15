@@ -141,6 +141,22 @@ export interface EnvironmentalJudgmentResult {
   opacityLimit?: number
 }
 
+export interface VehicleInfo {
+  vehicle: Vehicle
+  inspectionCount: number
+  latestInspection: InspectionRecord | null
+  passedCount: number
+  failedCount: number
+  recentInspections: InspectionRecord[]
+}
+
+export interface UserVehicleCenter {
+  totalVehicles: number
+  qualifiedCount: number
+  pendingCount: number
+  vehicles: VehicleInfo[]
+}
+
 export const login = (username: string, password: string) =>
   http.post('/auth/login', { username, password })
 
@@ -237,3 +253,12 @@ export const judgeEnvironmentalByNo = (
   inspectionNo: string,
   params?: { fuelType?: string; emissionStandard?: string }
 ) => http.get<EnvironmentalJudgmentResult>('/inspections/judge', { params: { inspectionNo, ...params } })
+
+export const fetchUserVehicleCenter = () =>
+  http.get<UserVehicleCenter>('/user/vehicle-center')
+
+export const fetchUserVehicles = () =>
+  http.get<Vehicle[]>('/user/vehicles')
+
+export const fetchUserVehicleInspections = (plateNumber: string) =>
+  http.get<InspectionRecord[]>('/user/vehicles/inspections', { params: { plateNumber } })
