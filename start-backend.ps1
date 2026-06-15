@@ -1,4 +1,4 @@
-$ErrorActionPreference = "SilentlyContinue"
+﻿$ErrorActionPreference = "SilentlyContinue"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendDir = Join-Path $ScriptDir "backend"
 $MockScript = Join-Path $ScriptDir "mock-backend-and-start.mjs"
@@ -62,10 +62,10 @@ function Find-Java {
         "C:\Program Files\Zulu\zulu-21\bin\java.exe",
         "C:\Program Files\Zulu\zulu-17\bin\java.exe",
         "C:\Program Files\Zulu\zulu-11\bin\java.exe",
-        "$env:USERPROFILE\scoop\apps\openjdk\current\bin\java.exe",
-        "$env:USERPROFILE\.sdkman\candidates\java\current\bin\java.exe",
-        "$env:USERPROFILE\AppData\Local\Programs\Eclipse Adoptium\jdk-21\bin\java.exe",
-        "$env:USERPROFILE\AppData\Local\Programs\Eclipse Adoptium\jdk-17\bin\java.exe"
+        "${env:USERPROFILE}\scoop\apps\openjdk\current\bin\java.exe",
+        "${env:USERPROFILE}\.sdkman\candidates\java\current\bin\java.exe",
+        "${env:USERPROFILE}\AppData\Local\Programs\Eclipse Adoptium\jdk-21\bin\java.exe",
+        "${env:USERPROFILE}\AppData\Local\Programs\Eclipse Adoptium\jdk-17\bin\java.exe"
     )
     foreach ($p in $candidates) {
         if (Test-Path $p) { return $p }
@@ -103,9 +103,9 @@ function Find-Maven {
         "C:\Program Files\Apache Software Foundation\maven-3.8.7\bin\mvn.cmd",
         "C:\Program Files\Apache Software Foundation\maven-3.8.6\bin\mvn.cmd",
         "C:\ProgramData\chocolatey\lib\maven\bin\mvn.cmd",
-        "$env:USERPROFILE\scoop\apps\maven\current\bin\mvn.cmd",
-        "$env:USERPROFILE\.sdkman\candidates\maven\current\bin\mvn",
-        "$env:USERPROFILE\.sdkman\candidates\maven\current\bin\mvn.cmd",
+        "${env:USERPROFILE}\scoop\apps\maven\current\bin\mvn.cmd",
+        "${env:USERPROFILE}\.sdkman\candidates\maven\current\bin\mvn",
+        "${env:USERPROFILE}\.sdkman\candidates\maven\current\bin\mvn.cmd",
         "C:\Program Files\JetBrains\IntelliJ IDEA Ultimate\plugins\maven\lib\maven3\bin\mvn.cmd",
         "C:\Program Files\JetBrains\IntelliJ IDEA Community\plugins\maven\lib\maven3\bin\mvn.cmd",
         "C:\Program Files\JetBrains\IntelliJ IDEA\plugins\maven\lib\maven3\bin\mvn.cmd"
@@ -118,15 +118,18 @@ function Find-Maven {
 
 function Start-MockBackend {
     param([switch]$WithFrontend)
+
     if (-not (Test-Path $MockScript)) {
         Write-Color "未找到 Mock 后端脚本: $MockScript" Red
         return $false
     }
+
     $node = Get-Command node -ErrorAction SilentlyContinue
     if (-not $node) {
         Write-Color "未找到 Node.js，无法启动 Mock 后端" Red
         return $false
     }
+
     Write-Color "`n=== 启动 Mock 后端 (Node.js 模拟) ===" Cyan
     $args = @($MockScript)
     if (-not $WithFrontend) { $args += "--backend-only" }
