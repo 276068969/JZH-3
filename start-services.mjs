@@ -66,7 +66,10 @@ async function findMaven() {
     if (existsSync(p)) return p
   }
   const wrapper = resolve(rootDir, 'backend', 'mvnw.cmd')
+  const wrapperJar = resolve(rootDir, 'backend', '.mvn', 'wrapper', 'maven-wrapper.jar')
+  if (existsSync(wrapper) && existsSync(wrapperJar)) return wrapper
   if (existsSync(wrapper)) return wrapper
+  const home = process.env['USERPROFILE'] || ''
   const candidates = [
     'C:\\Program Files\\Apache\\maven\\bin\\mvn.cmd',
     'C:\\Program Files\\Apache Software Foundation\\maven\\bin\\mvn.cmd',
@@ -83,12 +86,20 @@ async function findMaven() {
     'C:\\Program Files\\Apache Software Foundation\\maven-3.8.8\\bin\\mvn.cmd',
     'C:\\Program Files\\Apache Software Foundation\\maven-3.8.7\\bin\\mvn.cmd',
     'C:\\Program Files\\Apache Software Foundation\\maven-3.8.6\\bin\\mvn.cmd',
+    'C:\\Program Files\\Apache Software Foundation\\maven-3.8.5\\bin\\mvn.cmd',
     'C:\\ProgramData\\chocolatey\\lib\\maven\\bin\\mvn.cmd',
-    `${process.env['USERPROFILE'] || ''}\\scoop\\apps\\maven\\current\\bin\\mvn.cmd`,
-    `${process.env['USERPROFILE'] || ''}\\.sdkman\\candidates\\maven\\current\\bin\\mvn.cmd`,
+    'C:\\ProgramData\\chocolatey\\lib\\maven\\tools\\apache-maven\\bin\\mvn.cmd',
+    `${home}\\scoop\\apps\\maven\\current\\bin\\mvn.cmd`,
+    `${home}\\.sdkman\\candidates\\maven\\current\\bin\\mvn.cmd`,
     'C:\\Program Files\\JetBrains\\IntelliJ IDEA Ultimate\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd',
     'C:\\Program Files\\JetBrains\\IntelliJ IDEA Community\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd',
-    'C:\\Program Files\\JetBrains\\IntelliJ IDEA\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd'
+    'C:\\Program Files\\JetBrains\\IntelliJ IDEA\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd',
+    'C:\\Program Files (x86)\\JetBrains\\IntelliJ IDEA Ultimate\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd',
+    'C:\\Program Files (x86)\\JetBrains\\IntelliJ IDEA Community\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd',
+    `${home}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-U\\ch-0\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd`,
+    `${home}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C\\ch-0\\plugins\\maven\\lib\\maven3\\bin\\mvn.cmd`,
+    'C:\\Program Files\\NetBeans\\java\\maven\\bin\\mvn.cmd',
+    `${home}\\.m2\\wrapper\\dists\\apache-maven-3.9.9-bin\\*\\apache-maven-3.9.9\\bin\\mvn.cmd`
   ]
   for (const p of candidates) {
     if (existsSync(p)) return p
@@ -102,22 +113,81 @@ async function findJava() {
   if (process.env['JAVA_HOME'] && existsSync(resolve(process.env['JAVA_HOME'], 'bin', 'java.exe'))) {
     return resolve(process.env['JAVA_HOME'], 'bin', 'java.exe')
   }
+  if (process.env['JDK_HOME'] && existsSync(resolve(process.env['JDK_HOME'], 'bin', 'java.exe'))) {
+    return resolve(process.env['JDK_HOME'], 'bin', 'java.exe')
+  }
+  const home = process.env['USERPROFILE'] || ''
   const candidates = [
+    'C:\\Program Files\\Java\\jdk-23\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-22\\bin\\java.exe',
     'C:\\Program Files\\Java\\jdk-21\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-20\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-19\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-18\\bin\\java.exe',
     'C:\\Program Files\\Java\\jdk-17\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-16\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-15\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-14\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-13\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk-12\\bin\\java.exe',
     'C:\\Program Files\\Java\\jdk-11\\bin\\java.exe',
-    'C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\java.exe',
-    'C:\\Program Files\\Eclipse Adoptium\\jdk-17\\bin\\java.exe',
-    'C:\\Program Files\\Eclipse Adoptium\\jdk-11\\bin\\java.exe',
-    'C:\\Program Files\\Microsoft\\jdk-21\\bin\\java.exe',
-    'C:\\Program Files\\Microsoft\\jdk-17\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk1.8.0_301\\bin\\java.exe',
+    'C:\\Program Files\\Java\\jdk1.8.0_291\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-23.0.0.37-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-22.0.0.36-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.0.35-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-20.0.0.36-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.0.35-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.0.35\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-11.0.0.28-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\jdk-11.0.0.28\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\temurin-21\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\temurin-17\\bin\\java.exe',
+    'C:\\Program Files\\Eclipse Adoptium\\temurin-11\\bin\\java.exe',
+    'C:\\Program Files\\Microsoft\\jdk-23.0.1.11-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Microsoft\\jdk-21.0.2.12-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Microsoft\\jdk-17.0.7.7-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Microsoft\\jdk-11.0.25.9-hotspot\\bin\\java.exe',
+    'C:\\Program Files\\Zulu\\zulu-23\\bin\\java.exe',
     'C:\\Program Files\\Zulu\\zulu-21\\bin\\java.exe',
     'C:\\Program Files\\Zulu\\zulu-17\\bin\\java.exe',
     'C:\\Program Files\\Zulu\\zulu-11\\bin\\java.exe',
-    `${process.env['USERPROFILE'] || ''}\\scoop\\apps\\openjdk\\current\\bin\\java.exe`,
-    `${process.env['USERPROFILE'] || ''}\\.sdkman\\candidates\\java\\current\\bin\\java.exe`,
-    `${process.env['USERPROFILE'] || ''}\\AppData\\Local\\Programs\\Eclipse Adoptium\\jdk-21\\bin\\java.exe`,
-    `${process.env['USERPROFILE'] || ''}\\AppData\\Local\\Programs\\Eclipse Adoptium\\jdk-17\\bin\\java.exe`
+    'C:\\Program Files\\Zulu\\zulu-8\\bin\\java.exe',
+    'C:\\Program Files\\BellSoft\\LibericaJDK-21\\bin\\java.exe',
+    'C:\\Program Files\\BellSoft\\LibericaJDK-17\\bin\\java.exe',
+    'C:\\Program Files\\BellSoft\\LibericaJDK-11\\bin\\java.exe',
+    'C:\\Program Files\\Amazon Corretto\\jdk23.0.1_11\\bin\\java.exe',
+    'C:\\Program Files\\Amazon Corretto\\jdk21.0.2_13\\bin\\java.exe',
+    'C:\\Program Files\\Amazon Corretto\\jdk17.0.7_7\\bin\\java.exe',
+    'C:\\Program Files\\Amazon Corretto\\jdk11.0.19_7\\bin\\java.exe',
+    'C:\\Program Files\\SapMachine\\sapmachine-21\\bin\\java.exe',
+    'C:\\Program Files\\SapMachine\\sapmachine-17\\bin\\java.exe',
+    'C:\\Program Files\\SapMachine\\sapmachine-11\\bin\\java.exe',
+    'C:\\Program Files\\GraalVM\\graalvm-jdk-21\\bin\\java.exe',
+    'C:\\Program Files\\GraalVM\\graalvm-jdk-17\\bin\\java.exe',
+    'C:\\Program Files (x86)\\Java\\jdk-21\\bin\\java.exe',
+    'C:\\Program Files (x86)\\Java\\jdk-17\\bin\\java.exe',
+    'C:\\Program Files (x86)\\Eclipse Adoptium\\jdk-21\\bin\\java.exe',
+    'C:\\Program Files (x86)\\Eclipse Adoptium\\jdk-17\\bin\\java.exe',
+    `${home}\\scoop\\apps\\openjdk\\current\\bin\\java.exe`,
+    `${home}\\scoop\\apps\\temurin-jdk\\current\\bin\\java.exe`,
+    `${home}\\scoop\\apps\\oraclejdk\\current\\bin\\java.exe`,
+    `${home}\\scoop\\apps\\zulu-jdk\\current\\bin\\java.exe`,
+    `${home}\\.sdkman\\candidates\\java\\current\\bin\\java.exe`,
+    `${home}\\.jdks\\corretto-21\\bin\\java.exe`,
+    `${home}\\.jdks\\corretto-17\\bin\\java.exe`,
+    `${home}\\.jdks\\temurin-21\\bin\\java.exe`,
+    `${home}\\.jdks\\temurin-17\\bin\\java.exe`,
+    `${home}\\.jdks\\openjdk-21\\bin\\java.exe`,
+    `${home}\\.jdks\\openjdk-17\\bin\\java.exe`,
+    `${home}\\.gradle\\jdks\\jdk-21\\bin\\java.exe`,
+    `${home}\\.gradle\\jdks\\jdk-17\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\Programs\\Eclipse Adoptium\\jdk-21\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\Programs\\Eclipse Adoptium\\jdk-17\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\Programs\\Java\\jdk-21\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\Programs\\Java\\jdk-17\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-U\\ch-0\\jbr\\bin\\java.exe`,
+    `${home}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C\\ch-0\\jbr\\bin\\java.exe`
   ]
   for (const p of candidates) {
     if (existsSync(p)) return p
@@ -136,9 +206,7 @@ async function startMockBackend(onlyBackend = false) {
     console.error('[mock] Node.js not found, cannot start mock backend')
     return null
   }
-  const args = [mockScript]
-  if (onlyBackend) args.push('--backend-only')
-  args.push('--force-mock')
+  const args = [mockScript, '--backend-only', '--force-mock']
   const proc = spawn(node, args, { cwd: rootDir, stdio: 'inherit' })
   proc.on('error', (e) => console.error('[mock] spawn error:', e))
   proc.on('exit', (code) => console.log('[mock] exit code:', code))
@@ -189,11 +257,11 @@ async function startFrontend(backendPort = DEFAULT_BACKEND_PORT) {
       console.warn('[frontend] npm install may have failed:', e.message)
     }
   }
-  const viteBin = resolve(frontendDir, 'node_modules', '.bin', process.platform === 'win32' ? 'vite.cmd' : 'vite')
+  const viteEntry = resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js')
   const env = { ...process.env, VITE_BACKEND_PORT: String(backendPort) }
   let proc
-  if (existsSync(viteBin)) {
-    proc = spawn(node, [viteBin, '--host', '0.0.0.0', '--port', String(FRONTEND_PORT)], { cwd: frontendDir, stdio: 'inherit', env })
+  if (existsSync(viteEntry)) {
+    proc = spawn(process.execPath, [viteEntry, '--host', '0.0.0.0', '--port', String(FRONTEND_PORT)], { cwd: frontendDir, stdio: 'inherit', env })
   } else if (npm) {
     proc = spawn(npm, ['run', 'dev', '--', '--port', String(FRONTEND_PORT)], { cwd: frontendDir, stdio: 'inherit', env, shell: true })
   } else {

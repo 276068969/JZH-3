@@ -371,21 +371,13 @@ function buildMockServer() {
 
 function startFrontend(backendPort) {
   const frontendDir = resolve(rootDir, 'frontend')
-  const viteBins = [
-    resolve(frontendDir, 'node_modules', '.bin', 'vite.cmd'),
-    resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js')
-  ]
-  let viteBin = null
-  for (const p of viteBins) {
-    if (existsSync(p)) { viteBin = p; break }
-  }
-  if (!viteBin) {
+  const viteEntry = resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js')
+  if (!existsSync(viteEntry)) {
     log('Frontend', '未找到 Vite，请先执行 npm install')
     return null
   }
   const env = { ...process.env, VITE_BACKEND_PORT: String(backendPort) }
-  const args = [viteBin, '--host', '0.0.0.0', '--port', String(FRONTEND_PORT)]
-  const useShell = process.platform === 'win32'
+  const args = [viteEntry, '--host', '0.0.0.0', '--port', String(FRONTEND_PORT)]
   const proc = spawn(process.execPath, args, { cwd: frontendDir, stdio: 'inherit', env })
   proc.on('error', (err) => log('Frontend', '启动失败: ' + err.message))
   proc.on('exit', (code) => log('Frontend', '进程退出: ' + code))
