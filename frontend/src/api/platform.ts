@@ -163,6 +163,9 @@ export const fetchStationStatuses = () =>
 
 export const fetchAnnouncements = () => http.get<Announcement[]>('/announcements')
 
+export const fetchAnnouncementDetail = (id: number) =>
+  http.get<Announcement>('/announcements/detail', { params: { id } })
+
 export const fetchWarnings = () => http.get<WarningRecord[]>('/warnings')
 
 export const fetchWarningDetail = (id: number) =>

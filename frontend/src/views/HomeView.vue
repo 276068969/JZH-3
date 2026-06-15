@@ -73,9 +73,18 @@
         </div>
 
         <div class="card">
-          <h2>最新公告</h2>
+          <div class="section-header">
+            <h2>最新公告</h2>
+            <el-button type="primary" link @click="router.push({ name: 'announcement-list' })">查看全部</el-button>
+          </div>
           <el-timeline>
-            <el-timeline-item v-for="item in announcements" :key="item.id" :timestamp="formatDate(item.publishTime)">
+            <el-timeline-item
+              v-for="item in announcements"
+              :key="item.id"
+              :timestamp="formatDate(item.publishTime)"
+              class="announcement-link"
+              @click="router.push({ name: 'announcement-detail', params: { id: item.id } })"
+            >
               {{ item.title }}
             </el-timeline-item>
           </el-timeline>
@@ -458,6 +467,14 @@ h2 {
 }
 
 .user-info:hover {
+  color: #409EFF;
+}
+
+.announcement-link {
+  cursor: pointer;
+}
+
+.announcement-link:hover :deep(.el-timeline-item__content) {
   color: #409EFF;
 }
 </style>

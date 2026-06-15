@@ -5,6 +5,8 @@ import AdminView from '@/views/AdminView.vue'
 import InspectionEntryView from '@/views/InspectionEntryView.vue'
 import InspectionReportDetail from '@/views/InspectionReportDetail.vue'
 import WarningHandleView from '@/views/WarningHandleView.vue'
+import AnnouncementListView from '@/views/AnnouncementListView.vue'
+import AnnouncementDetailView from '@/views/AnnouncementDetailView.vue'
 import { useAuthStore, UserRole } from '@/stores/auth'
 
 declare module 'vue-router' {
@@ -38,6 +40,8 @@ const router = createRouter({
       }
     },
     { path: '/report/:inspectionNo?', name: 'report-detail', component: InspectionReportDetail },
+    { path: '/announcements', name: 'announcement-list', component: AnnouncementListView },
+    { path: '/announcements/:id', name: 'announcement-detail', component: AnnouncementDetailView },
     { 
       path: '/warning/:id', 
       name: 'warning-handle', 
