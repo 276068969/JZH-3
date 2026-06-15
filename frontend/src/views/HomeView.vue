@@ -75,15 +75,22 @@
         <div class="card">
           <div class="section-header">
             <h2>最新公告</h2>
-            <el-button type="primary" link @click="router.push({ name: 'announcement-list' })">查看全部</el-button>
+            <el-button
+              v-if="announcements.length > 0"
+              type="primary"
+              link
+              @click="router.push({ name: 'announcement-list' })"
+            >查看全部</el-button>
           </div>
-          <el-timeline>
+          <el-empty v-if="announcements.length === 0" description="暂无公告" :image-size="60" />
+          <el-timeline v-else>
             <el-timeline-item
               v-for="item in announcements"
-              :key="item.id"
+              :key="String(item.id)"
               :timestamp="formatDate(item.publishTime)"
               class="announcement-link"
-              @click="router.push({ name: 'announcement-detail', params: { id: item.id } })"
+              :title="item.title"
+              @click="goToAnnouncementDetail(item.id)"
             >
               {{ item.title }}
             </el-timeline-item>
@@ -421,9 +428,27 @@ const viewReportDetail = (row: InspectionRecord) => {
   router.push({ name: 'report-detail', params: { inspectionNo: row.inspectionNo } })
 }
 
+const parseAnnouncementId = (raw: unknown): number | null => {
+  if (raw == null) return null
+  const str = String(raw).trim()
+  if (!str) return null
+  const n = Number(str)
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) return null
+  return n
+}
+
+const goToAnnouncementDetail = (rawId: number | string) => {
+  const id = parseAnnouncementId(rawId)
+  if (!id) {
+    ElMessage.warning('公告编号无效')
+    return
+  }
+  router.push({ name: 'announcement-detail', params: { id: String(id) } })
+}
+
 onMounted(async () => {
   const [announcementResp] = await Promise.all([fetchAnnouncements()])
-  announcements.value = announcementResp.data
+  announcements.value = Array.isArray(announcementResp?.data) ? announcementResp.data : []
   await Promise.all([loadStations(), loadStationStatuses()])
   await queryVehicle()
 })

@@ -24,17 +24,25 @@
               <h1 style="margin: 6px 0 0; font-size: 24px">政策公告</h1>
             </div>
           </div>
+          <div v-if="!loading && announcements.length > 0" class="muted count-label">
+            共 {{ announcements.length }} 条公告
+          </div>
         </div>
 
         <div v-loading="loading" style="margin-top: 16px">
-          <el-empty v-if="!loading && announcements.length === 0" description="暂无公告" />
+          <el-empty
+            v-if="!loading && announcements.length === 0"
+            description="暂无公告"
+            :image-size="100"
+          />
 
           <div v-else class="announcement-list">
             <div
               v-for="item in announcements"
-              :key="item.id"
+              :key="String(item.id)"
               class="card announcement-item"
-              @click="router.push({ name: 'announcement-detail', params: { id: item.id } })"
+              :title="item.title"
+              @click="goToDetail(item.id)"
             >
               <div class="announcement-item-main">
                 <div class="announcement-item-title">
@@ -103,13 +111,32 @@ const getTypeTagType = (type: string) => {
   return 'info'
 }
 
+const parseId = (raw: unknown): number | null => {
+  if (raw == null) return null
+  const str = String(raw).trim()
+  if (!str) return null
+  const n = Number(str)
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) return null
+  return n
+}
+
+const goToDetail = (rawId: number | string) => {
+  const id = parseId(rawId)
+  if (!id) {
+    ElMessage.warning('公告编号无效')
+    return
+  }
+  router.push({ name: 'announcement-detail', params: { id: String(id) } })
+}
+
 onMounted(async () => {
   loading.value = true
   try {
     const { data } = await fetchAnnouncements()
-    announcements.value = data
+    announcements.value = Array.isArray(data) ? data : []
   } catch {
     ElMessage.warning('公告加载失败')
+    announcements.value = []
   } finally {
     loading.value = false
   }
@@ -130,6 +157,10 @@ onMounted(async () => {
 }
 
 .breadcrumb {
+  font-size: 13px;
+}
+
+.count-label {
   font-size: 13px;
 }
 
@@ -177,6 +208,7 @@ onMounted(async () => {
   gap: 18px;
   color: #66758a;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 .meta-item {

@@ -52,18 +52,29 @@
             <div class="detail-content" v-html="renderContent(announcement.content)"></div>
           </div>
 
-          <div v-if="prevAnnouncement || nextAnnouncement" class="nav-links" style="margin-top: 16px">
-            <div class="card nav-link-item" v-if="prevAnnouncement" @click="goToAnnouncement(prevAnnouncement.id)">
+          <div
+            v-if="prevAnnouncement || nextAnnouncement"
+            class="nav-links"
+            :class="{ 'nav-links-single': !prevAnnouncement || !nextAnnouncement }"
+            style="margin-top: 16px"
+          >
+            <div
+              v-if="prevAnnouncement"
+              class="card nav-link-item"
+              @click="goToAnnouncement(prevAnnouncement.id)"
+            >
               <div class="nav-link-label muted">上一篇</div>
               <div class="nav-link-title">{{ prevAnnouncement.title }}</div>
             </div>
-            <div v-else class="card nav-link-item nav-link-placeholder"></div>
 
-            <div class="card nav-link-item" v-if="nextAnnouncement" @click="goToAnnouncement(nextAnnouncement.id)">
+            <div
+              v-if="nextAnnouncement"
+              class="card nav-link-item nav-link-next"
+              @click="goToAnnouncement(nextAnnouncement.id)"
+            >
               <div class="nav-link-label muted">下一篇</div>
               <div class="nav-link-title">{{ nextAnnouncement.title }}</div>
             </div>
-            <div v-else class="card nav-link-item nav-link-placeholder"></div>
           </div>
         </template>
       </div>
@@ -108,37 +119,54 @@ const getTypeTagType = (type: string) => {
 }
 
 const renderContent = (content?: string): string => {
-  if (!content) return '<p style="color: #999">暂无正文内容</p>'
+  if (!content || !content.trim()) return '<p style="color: #999">暂无正文内容</p>'
   return content
     .replace(/\n/g, '<br>')
     .replace(/ {2}/g, '&nbsp;&nbsp;')
 }
 
+const parseId = (raw: unknown): number | null => {
+  if (raw == null) return null
+  const str = String(raw).trim()
+  if (!str) return null
+  const n = Number(str)
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) return null
+  return n
+}
+
 const currentIndex = computed(() => {
   if (!announcement.value) return -1
-  return allAnnouncements.value.findIndex(a => a.id === announcement.value!.id)
+  const targetId = announcement.value.id
+  return allAnnouncements.value.findIndex(a => Number(a.id) === Number(targetId))
 })
 
-const prevAnnouncement = computed(() => {
+const prevAnnouncement = computed<Announcement | null>(() => {
   const idx = currentIndex.value
   if (idx <= 0) return null
-  return allAnnouncements.value[idx - 1]
+  return allAnnouncements.value[idx - 1] ?? null
 })
 
-const nextAnnouncement = computed(() => {
+const nextAnnouncement = computed<Announcement | null>(() => {
   const idx = currentIndex.value
-  if (idx < 0 || idx >= allAnnouncements.value.length - 1) return null
-  return allAnnouncements.value[idx + 1]
+  if (idx < 0) return null
+  if (idx >= allAnnouncements.value.length - 1) return null
+  return allAnnouncements.value[idx + 1] ?? null
 })
 
-const goToAnnouncement = (id: number) => {
-  router.push({ name: 'announcement-detail', params: { id } })
+const goToAnnouncement = (rawId: number | string) => {
+  const id = parseId(rawId)
+  if (!id) {
+    ElMessage.warning('公告编号无效')
+    return
+  }
+  router.push({ name: 'announcement-detail', params: { id: String(id) } })
 }
 
 const loadDetail = async () => {
-  const id = Number(route.params.id)
+  const id = parseId(route.params.id)
   if (!id) {
-    ElMessage.error('缺少公告编号')
+    ElMessage.error('缺少或无效的公告编号')
+    announcement.value = null
     return
   }
   loading.value = true
@@ -160,9 +188,9 @@ const loadDetail = async () => {
 const loadAllAnnouncements = async () => {
   try {
     const { data } = await fetchAnnouncements()
-    allAnnouncements.value = data
+    allAnnouncements.value = Array.isArray(data) ? data : []
   } catch {
-    // ignore
+    allAnnouncements.value = []
   }
 }
 
@@ -170,11 +198,18 @@ onMounted(async () => {
   await Promise.all([loadDetail(), loadAllAnnouncements()])
 })
 
-watch(() => route.params.id, () => {
-  if (route.name === 'announcement-detail' && route.params.id) {
-    loadDetail()
+watch(
+  () => route.params.id,
+  async (newId) => {
+    if (route.name !== 'announcement-detail') return
+    const parsed = parseId(newId)
+    if (!parsed) return
+    if (allAnnouncements.value.length === 0) {
+      await loadAllAnnouncements()
+    }
+    await loadDetail()
   }
-})
+)
 </script>
 
 <style scoped>
@@ -206,6 +241,7 @@ watch(() => route.params.id, () => {
   gap: 16px;
   color: #66758a;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 .meta-item {
@@ -227,6 +263,10 @@ watch(() => route.params.id, () => {
   gap: 12px;
 }
 
+.nav-links.nav-links-single {
+  grid-template-columns: 1fr;
+}
+
 .nav-link-item {
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -237,8 +277,8 @@ watch(() => route.params.id, () => {
   box-shadow: 0 2px 12px rgba(64, 158, 255, 0.12);
 }
 
-.nav-link-placeholder {
-  visibility: hidden;
+.nav-link-next {
+  text-align: right;
 }
 
 .nav-link-label {
