@@ -40,7 +40,10 @@ public class AuthController {
         })
         .orElseGet(() -> {
           String ip = httpRequest.getRemoteAddr();
-          systemLogService.recordLog(request.username(), "", "登录", "系统", "用户 " + request.username() + " 登录失败（密码错误）", "失败", ip);
+          UserAccount userInfo = demoDataService.findUserByUsername(request.username()).orElse(null);
+          String operator = userInfo != null ? userInfo.displayName() : request.username();
+          String role = userInfo != null ? userInfo.role() : "未知";
+          systemLogService.recordLog(operator, role, "登录", "系统", "用户 " + request.username() + " 登录失败（密码错误或账号不存在）", "失败", ip);
           return ResponseEntity.status(401).build();
         });
   }
