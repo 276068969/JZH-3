@@ -15,6 +15,8 @@ import com.example.emission.model.Vehicle;
 import com.example.emission.model.WarningRecord;
 import com.example.emission.service.DemoDataService;
 import com.example.emission.service.EmissionJudgmentService;
+import com.example.emission.service.SystemLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +34,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformController {
   private final DemoDataService demoDataService;
   private final EmissionJudgmentService emissionJudgmentService;
+  private final SystemLogService systemLogService;
 
-  public PlatformController(DemoDataService demoDataService, EmissionJudgmentService emissionJudgmentService) {
+  public PlatformController(DemoDataService demoDataService, EmissionJudgmentService emissionJudgmentService, SystemLogService systemLogService) {
     this.demoDataService = demoDataService;
     this.emissionJudgmentService = emissionJudgmentService;
+    this.systemLogService = systemLogService;
   }
 
   private String resolveUsername(Authentication authentication) {
@@ -52,6 +56,13 @@ public class PlatformController {
     return "";
   }
 
+  private UserAccount resolveUser(Authentication authentication) {
+    if (authentication != null && authentication.getDetails() instanceof UserAccount user) {
+      return user;
+    }
+    return null;
+  }
+
   @GetMapping("/dashboard")
   @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
   public Map<String, Object> dashboard(@RequestParam(required = false, defaultValue = "7") Integer days) {
@@ -59,8 +70,17 @@ public class PlatformController {
   }
 
   @GetMapping("/vehicles/search")
-  public ApiResponse<Vehicle> searchVehicle(@RequestParam(required = false) String keyword) {
-    return demoDataService.searchVehicleWithValidation(keyword);
+  public ApiResponse<Vehicle> searchVehicle(@RequestParam(required = false) String keyword,
+                                              Authentication authentication, HttpServletRequest httpRequest) {
+    ApiResponse<Vehicle> response = demoDataService.searchVehicleWithValidation(keyword);
+    UserAccount user = resolveUser(authentication);
+    if (user != null && (user.role().equals("平台管理员") || user.role().equals("监管人员"))) {
+      String ip = httpRequest.getRemoteAddr();
+      String result = response.isSuccess() ? "成功" : "失败";
+      String detail = "查询关键词：" + (keyword != null ? keyword : "");
+      systemLogService.recordLog(user, "车辆查询", "车辆", detail, result, ip);
+    }
+    return response;
   }
 
   @GetMapping("/user/vehicle-center")
@@ -110,8 +130,14 @@ public class PlatformController {
 
   @PostMapping("/inspections/audit")
   @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
-  public Map<String, Object> audit(@RequestBody AuditRequest request, Authentication authentication) {
-    return demoDataService.audit(request, resolveUsername(authentication));
+  public Map<String, Object> audit(@RequestBody AuditRequest request, Authentication authentication, HttpServletRequest httpRequest) {
+    Map<String, Object> result = demoDataService.audit(request, resolveUsername(authentication));
+    UserAccount user = resolveUser(authentication);
+    String ip = httpRequest.getRemoteAddr();
+    String action = "PASS".equals(request.getAction()) ? "审核通过" : "审核退回";
+    String logResult = Boolean.TRUE.equals(result.get("success")) ? "成功" : "失败";
+    systemLogService.recordLog(user, action, "检测记录", "审核检测编号：" + request.getInspectionNo(), logResult, ip);
+    return result;
   }
 
   @PostMapping("/inspections/create")
@@ -148,11 +174,18 @@ public class PlatformController {
   @GetMapping("/inspections/detail")
   public ResponseEntity<InspectionRecord> inspectionDetail(
       @RequestParam String inspectionNo,
-      Authentication authentication) {
+      Authentication authentication, HttpServletRequest httpRequest) {
     String username = resolveUsernameFromAuth(authentication);
-    return demoDataService.getInspectionDetailAccessible(inspectionNo, username)
+    ResponseEntity<InspectionRecord> response = demoDataService.getInspectionDetailAccessible(inspectionNo, username)
         .map(ResponseEntity::ok)
         .orElseGet(() -> ResponseEntity.notFound().build());
+    UserAccount user = resolveUser(authentication);
+    if (user != null && (user.role().equals("平台管理员") || user.role().equals("监管人员"))) {
+      String ip = httpRequest.getRemoteAddr();
+      String result = response.getStatusCode().is2xxSuccessful() ? "成功" : "未找到";
+      systemLogService.recordLog(user, "检测记录查看", "检测记录", "查看检测编号：" + inspectionNo, result, ip);
+    }
+    return response;
   }
 
   @GetMapping("/inspections/audit-records")
@@ -251,8 +284,13 @@ public class PlatformController {
 
   @PostMapping("/warnings/handle")
   @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
-  public Map<String, Object> handleWarning(@RequestBody WarningHandleRequest request, Authentication authentication) {
-    return demoDataService.handleWarning(request, resolveUsername(authentication));
+  public Map<String, Object> handleWarning(@RequestBody WarningHandleRequest request, Authentication authentication, HttpServletRequest httpRequest) {
+    Map<String, Object> result = demoDataService.handleWarning(request, resolveUsername(authentication));
+    UserAccount user = resolveUser(authentication);
+    String ip = httpRequest.getRemoteAddr();
+    String logResult = Boolean.TRUE.equals(result.get("success")) ? "成功" : "失败";
+    systemLogService.recordLog(user, "预警处置", "预警记录", "处置预警ID：" + request.getWarningId(), logResult, ip);
+    return result;
   }
 
   @GetMapping("/warnings/inspections")

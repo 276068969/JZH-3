@@ -82,3 +82,18 @@ CREATE TABLE IF NOT EXISTS pollutant_limit_rules (
   INDEX idx_emission_standard (emission_standard),
   INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='污染物限值规则表';
+
+CREATE TABLE IF NOT EXISTS system_logs (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '日志ID',
+  operator VARCHAR(64) NOT NULL COMMENT '操作人',
+  role VARCHAR(64) NOT NULL COMMENT '角色',
+  action VARCHAR(64) NOT NULL COMMENT '操作类型',
+  business_object VARCHAR(255) NOT NULL COMMENT '业务对象',
+  detail TEXT COMMENT '操作详情',
+  result VARCHAR(32) NOT NULL COMMENT '操作结果',
+  operate_time DATETIME NOT NULL COMMENT '操作时间',
+  ip VARCHAR(64) COMMENT 'IP地址',
+  INDEX idx_operator (operator),
+  INDEX idx_action (action),
+  INDEX idx_operate_time (operate_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统操作日志表';

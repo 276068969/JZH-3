@@ -15,6 +15,10 @@
           <el-menu-item index="vehicles">车辆信息</el-menu-item>
           <el-menu-item index="stations">检测站管理</el-menu-item>
           <el-menu-item index="rules">限值规则</el-menu-item>
+          <el-menu-item index="logs">系统日志</el-menu-item>
+        </template>
+        <template v-if="auth.isRegulator">
+          <el-menu-item index="logs">系统日志</el-menu-item>
         </template>
         <template v-if="auth.isStation">
           <el-menu-item index="entry">检测录入</el-menu-item>
@@ -434,6 +438,82 @@
           </div>
         </section>
       </template>
+
+      <template v-if="activeMenu === 'logs'">
+        <section class="section admin-section">
+          <div class="card">
+            <div class="section-header">
+              <h2>系统操作日志</h2>
+              <div class="filter-bar">
+                <el-input v-model="logFilterOperator" placeholder="操作人" clearable style="width: 140px" @keyup.enter="loadLogData" />
+                <el-select v-model="logFilterRole" placeholder="角色" clearable style="width: 140px; margin-left: 8px" @change="loadLogData">
+                  <el-option label="平台管理员" value="平台管理员" />
+                  <el-option label="监管人员" value="监管人员" />
+                  <el-option label="检测站工作人员" value="检测站工作人员" />
+                  <el-option label="普通用户" value="普通用户" />
+                </el-select>
+                <el-select v-model="logFilterAction" placeholder="操作类型" clearable style="width: 140px; margin-left: 8px" @change="loadLogData">
+                  <el-option label="登录" value="登录" />
+                  <el-option label="车辆查询" value="车辆查询" />
+                  <el-option label="检测记录查看" value="检测记录查看" />
+                  <el-option label="审核通过" value="审核通过" />
+                  <el-option label="审核退回" value="审核退回" />
+                  <el-option label="预警处置" value="预警处置" />
+                </el-select>
+                <el-date-picker
+                  v-model="logFilterStartTime"
+                  type="date"
+                  placeholder="开始日期"
+                  value-format="YYYY-MM-DD"
+                  style="width: 160px; margin-left: 8px"
+                />
+                <el-date-picker
+                  v-model="logFilterEndTime"
+                  type="date"
+                  placeholder="结束日期"
+                  value-format="YYYY-MM-DD"
+                  style="width: 160px; margin-left: 8px"
+                />
+                <el-button type="primary" :icon="Search" style="margin-left: 8px" @click="loadLogData">查询</el-button>
+                <el-button @click="resetLogFilter">重置</el-button>
+              </div>
+            </div>
+            <el-table :data="logList" border stripe>
+              <el-table-column prop="operateTime" label="操作时间" width="170" />
+              <el-table-column prop="operator" label="操作人" width="130" />
+              <el-table-column prop="role" label="角色" width="130">
+                <template #default="{ row }">
+                  <el-tag :type="getRoleTagType(row.role)" size="small" effect="plain">{{ row.role }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="action" label="操作类型" width="130">
+                <template #default="{ row }">
+                  <el-tag :type="getActionTagType(row.action)" size="small">{{ row.action }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="businessObject" label="业务对象" width="120" />
+              <el-table-column prop="detail" label="操作详情" min-width="220" show-overflow-tooltip />
+              <el-table-column prop="result" label="结果" width="90">
+                <template #default="{ row }">
+                  <el-tag :type="row.result === '成功' ? 'success' : 'danger'" size="small" effect="light">{{ row.result }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="ip" label="IP" width="140" />
+            </el-table>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end">
+              <el-pagination
+                v-model:current-page="logPage"
+                v-model:page-size="logPageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                :total="logTotal"
+                layout="total, sizes, prev, pager, next"
+                @size-change="loadLogData"
+                @current-change="loadLogData"
+              />
+            </div>
+          </div>
+        </section>
+      </template>
     </section>
 
     <el-dialog
@@ -586,6 +666,7 @@ import {
   deletePollutantLimitRule,
   fetchFuelTypes,
   fetchEmissionStandards,
+  fetchSystemLogs,
   type AuditRecord,
   type InspectionRecord,
   type WarningRecord,
@@ -593,7 +674,8 @@ import {
   type Vehicle,
   type PollutantLimitRule,
   type InspectionFilterParams,
-  type InspectionStatistics
+  type InspectionStatistics,
+  type SystemLog
 } from '@/api/platform'
 import { useAuthStore, UserRole } from '@/stores/auth'
 
@@ -682,6 +764,16 @@ const ruleFormRules = {
   opacityLimit: [{ required: true, message: '请输入烟度限值', trigger: 'blur' }]
 }
 
+const logList = ref<SystemLog[]>([])
+const logTotal = ref(0)
+const logPage = ref(1)
+const logPageSize = ref(20)
+const logFilterOperator = ref('')
+const logFilterRole = ref('')
+const logFilterAction = ref('')
+const logFilterStartTime = ref('')
+const logFilterEndTime = ref('')
+
 const getDefaultMenu = (): string => {
   if (auth.isStation) return 'records'
   if (auth.isAdmin || auth.isRegulator) return 'dashboard'
@@ -708,6 +800,7 @@ const pageTitle = computed(() => {
     case 'stations': return '检测站管理'
     case 'warnings': return '超标预警'
     case 'rules': return '污染物限值规则'
+    case 'logs': return '系统日志'
     case 'entry': return '检测录入'
     default: return '数据看板'
   }
@@ -804,6 +897,9 @@ const handleMenuSelect = (index: string) => {
   }
   if (index === 'records') {
     loadInspectionData()
+  }
+  if (index === 'logs') {
+    loadLogData()
   }
 }
 
@@ -1208,6 +1304,52 @@ const loadFuelAndStandardOptions = async () => {
   }
 }
 
+const loadLogData = async () => {
+  try {
+    const { data } = await fetchSystemLogs({
+      page: logPage.value,
+      pageSize: logPageSize.value,
+      operator: logFilterOperator.value || undefined,
+      role: logFilterRole.value || undefined,
+      action: logFilterAction.value || undefined,
+      startTime: logFilterStartTime.value || undefined,
+      endTime: logFilterEndTime.value || undefined
+    })
+    logList.value = data.records || []
+    logTotal.value = data.total || 0
+  } catch (e) {
+    ElMessage.error('加载系统日志失败')
+  }
+}
+
+const resetLogFilter = () => {
+  logFilterOperator.value = ''
+  logFilterRole.value = ''
+  logFilterAction.value = ''
+  logFilterStartTime.value = ''
+  logFilterEndTime.value = ''
+  logPage.value = 1
+  loadLogData()
+}
+
+const getRoleTagType = (role: string) => {
+  if (role === '平台管理员') return 'danger'
+  if (role === '监管人员') return 'warning'
+  if (role === '检测站工作人员') return 'primary'
+  if (role === '普通用户') return 'info'
+  return 'info'
+}
+
+const getActionTagType = (action: string) => {
+  if (action === '登录') return ''
+  if (action === '车辆查询') return 'primary'
+  if (action === '检测记录查看') return 'primary'
+  if (action === '审核通过') return 'success'
+  if (action === '审核退回') return 'danger'
+  if (action === '预警处置') return 'warning'
+  return 'info'
+}
+
 onMounted(async () => {
   await Promise.all([
     loadData(),
@@ -1225,6 +1367,9 @@ onMounted(async () => {
   }
   if (activeMenu.value === 'records') {
     await loadInspectionData()
+  }
+  if (activeMenu.value === 'logs') {
+    await loadLogData()
   }
 })
 </script>

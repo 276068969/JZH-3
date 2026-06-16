@@ -162,6 +162,35 @@ export interface EnvironmentalJudgmentResult {
   opacityLimit?: number
 }
 
+export interface SystemLog {
+  id: number
+  operator: string
+  role: string
+  action: string
+  businessObject: string
+  detail: string
+  result: string
+  operateTime: string
+  ip: string
+}
+
+export interface SystemLogFilterParams {
+  page?: number
+  pageSize?: number
+  operator?: string
+  role?: string
+  action?: string
+  startTime?: string
+  endTime?: string
+}
+
+export interface SystemLogListResult {
+  total: number
+  page: number
+  pageSize: number
+  records: SystemLog[]
+}
+
 export interface VehicleInfo {
   vehicle: Vehicle
   inspectionCount: number
@@ -289,3 +318,6 @@ export const fetchUserVehicles = () =>
 
 export const fetchUserVehicleInspections = (plateNumber: string) =>
   http.get<InspectionRecord[]>('/user/vehicles/inspections', { params: { plateNumber } })
+
+export const fetchSystemLogs = (params?: SystemLogFilterParams) =>
+  http.get<SystemLogListResult>('/system-logs/list', { params })

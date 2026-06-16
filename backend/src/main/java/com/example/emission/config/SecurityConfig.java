@@ -57,6 +57,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/announcements/create",
                 "/announcements/update", "/announcements/delete",
                 "/announcements/publish", "/announcements/offline").hasRole("平台管理员")
+            .requestMatchers(HttpMethod.GET, "/system-logs/**").hasAnyRole("平台管理员", "监管人员")
             .requestMatchers("/auth/me").authenticated()
             .anyRequest().authenticated()
         )
