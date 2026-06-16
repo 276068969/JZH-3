@@ -734,8 +734,9 @@ const metrics = computed<Metric[]>(() => {
 
 const filteredRecords = computed(() => {
   let result = records.value
-  if (auth.isStation && auth.user?.displayName) {
-    result = result.filter(r => r.stationName.includes(auth.user.displayName))
+  const stationDisplayName = auth.user?.displayName
+  if (auth.isStation && stationDisplayName) {
+    result = result.filter(r => r.stationName.includes(stationDisplayName))
   }
   return result
 })
