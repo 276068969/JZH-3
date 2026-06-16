@@ -73,9 +73,16 @@ const stations = [
 let inspectionRecords = [
   { id: 1, inspectionNo: 'JC20260614101', plateNumber: '京A12345', stationName: '朝阳机动车环保检测站', inspectionTime: '2026-06-14 10:15', coValue: 0.18, hcValue: 18.4, noxValue: 32.8, opacityValue: 0.11, result: '合格', inspector: '王工', reportStatus: '已审核', auditor: '李监管', auditTime: '2026-06-14 11:00' },
   { id: 2, inspectionNo: 'JC20260614102', plateNumber: '京A12345', stationName: '朝阳机动车环保检测站', inspectionTime: '2026-06-14 13:28', coValue: 0.4, hcValue: 40.0, noxValue: 80.0, opacityValue: 0.22, result: '不合格', inspector: 'solo-audit', reportStatus: '待审核', auditor: null, auditTime: null },
-  { id: 3, inspectionNo: 'JC20251215023', plateNumber: '京A12345', stationName: '海淀机动车检测中心', inspectionTime: '2025-12-15 14:20', coValue: 0.22, hcValue: 22.1, noxValue: 45.3, opacityValue: 0.15, result: '合格', inspector: '赵工', reportStatus: '已审核', auditor: '王监管', auditTime: '2025-12-15 15:30' },
-  { id: 4, inspectionNo: 'JC20250620018', plateNumber: '京B67890', stationName: '朝阳机动车环保检测站', inspectionTime: '2025-06-20 09:45', coValue: 0.7, hcValue: 70.0, noxValue: 110.0, opacityValue: 0.42, result: '不合格', inspector: '张工', reportStatus: '已审核', auditor: '李监管', auditTime: '2025-06-20 10:30' },
-  { id: 5, inspectionNo: 'JC20241210031', plateNumber: '京C24680', stationName: '亦庄机动车检测站', inspectionTime: '2024-12-10 16:08', coValue: 0.15, hcValue: 15.0, noxValue: 28.0, opacityValue: 0.08, result: '合格', inspector: '刘工', reportStatus: '已审核', auditor: '赵监管', auditTime: '2024-12-10 17:00' }
+  { id: 3, inspectionNo: 'JC20260613001', plateNumber: '京B67890', stationName: '海淀机动车检测中心', inspectionTime: '2026-06-13 09:30', coValue: 0.45, hcValue: 45.0, noxValue: 90.0, opacityValue: 0.35, result: '不合格', inspector: '赵工', reportStatus: '待审核', auditor: null, auditTime: null },
+  { id: 4, inspectionNo: 'JC20260612005', plateNumber: '京C24680', stationName: '亦庄机动车检测站', inspectionTime: '2026-06-12 14:45', coValue: 0.16, hcValue: 16.2, noxValue: 30.5, opacityValue: 0.10, result: '合格', inspector: '陈工', reportStatus: '已审核', auditor: '王监管', auditTime: '2026-06-12 16:00' },
+  { id: 5, inspectionNo: 'JC20260611008', plateNumber: '京D13579', stationName: '朝阳机动车环保检测站', inspectionTime: '2026-06-11 11:20', coValue: 0.5, hcValue: 55.0, noxValue: 95.0, opacityValue: 0.40, result: '不合格', inspector: '王工', reportStatus: '已退回', auditor: '李监管', auditTime: '2026-06-11 14:30', auditOpinion: '检测数据异常，请重新检测' },
+  { id: 6, inspectionNo: 'JC20260610012', plateNumber: '京E24680', stationName: '丰台环保检测站', inspectionTime: '2026-06-10 10:00', coValue: 0.20, hcValue: 20.5, noxValue: 38.0, opacityValue: 0.12, result: '合格', inspector: '孙工', reportStatus: '待审核', auditor: null, auditTime: null },
+  { id: 7, inspectionNo: 'JC20260609015', plateNumber: '京A12345', stationName: '海淀机动车检测中心', inspectionTime: '2026-06-09 15:30', coValue: 0.19, hcValue: 19.0, noxValue: 34.5, opacityValue: 0.11, result: '合格', inspector: '赵工', reportStatus: '已审核', auditor: '赵监管', auditTime: '2026-06-09 16:45' },
+  { id: 8, inspectionNo: 'JC20260608020', plateNumber: '京F97531', stationName: '通州机动车检测站', inspectionTime: '2026-06-08 08:45', coValue: 0.35, hcValue: 38.0, noxValue: 72.0, opacityValue: 0.28, result: '不合格', inspector: '周工', reportStatus: '待审核', auditor: null, auditTime: null },
+  { id: 9, inspectionNo: 'JC20251215023', plateNumber: '京A12345', stationName: '海淀机动车检测中心', inspectionTime: '2025-12-15 14:20', coValue: 0.22, hcValue: 22.1, noxValue: 45.3, opacityValue: 0.15, result: '合格', inspector: '赵工', reportStatus: '已审核', auditor: '王监管', auditTime: '2025-12-15 15:30' },
+  { id: 10, inspectionNo: 'JC20250620018', plateNumber: '京B67890', stationName: '朝阳机动车环保检测站', inspectionTime: '2025-06-20 09:45', coValue: 0.7, hcValue: 70.0, noxValue: 110.0, opacityValue: 0.42, result: '不合格', inspector: '张工', reportStatus: '已审核', auditor: '李监管', auditTime: '2025-06-20 10:30' },
+  { id: 11, inspectionNo: 'JC20241210031', plateNumber: '京C24680', stationName: '亦庄机动车检测站', inspectionTime: '2024-12-10 16:08', coValue: 0.15, hcValue: 15.0, noxValue: 28.0, opacityValue: 0.08, result: '合格', inspector: '刘工', reportStatus: '已审核', auditor: '赵监管', auditTime: '2024-12-10 17:00' },
+  { id: 12, inspectionNo: 'JC20260615001', plateNumber: '京G86420', stationName: '石景山检测中心', inspectionTime: '2026-06-15 09:00', coValue: 0.25, hcValue: 24.0, noxValue: 42.0, opacityValue: 0.14, result: '合格', inspector: '吴工', reportStatus: '待审核', auditor: null, auditTime: null }
 ]
 
 function parseUrl(req) {
@@ -237,6 +244,59 @@ function buildMockServer() {
       const plate = url.searchParams.get('plateNumber')
       const list = plate ? inspectionRecords.filter(r => r.plateNumber === plate) : inspectionRecords
       jsonResp(res, list.sort((a, b) => new Date(b.inspectionTime) - new Date(a.inspectionTime)))
+      return
+    }
+
+    if (path === '/inspections/station-names') {
+      const names = stations.map(s => s.name)
+      jsonResp(res, names)
+      return
+    }
+
+    if (path === '/inspections/filter') {
+      const plateNumber = url.searchParams.get('plateNumber') || ''
+      const stationName = url.searchParams.get('stationName') || ''
+      const inspectionTimeStart = url.searchParams.get('inspectionTimeStart') || ''
+      const inspectionTimeEnd = url.searchParams.get('inspectionTimeEnd') || ''
+      const result = url.searchParams.get('result') || ''
+      const reportStatus = url.searchParams.get('reportStatus') || ''
+
+      let filtered = inspectionRecords.filter(r => {
+        if (plateNumber.trim() && !r.plateNumber.toUpperCase().includes(plateNumber.trim().toUpperCase())) {
+          return false
+        }
+        if (stationName.trim() && !r.stationName.includes(stationName.trim())) {
+          return false
+        }
+        if (inspectionTimeStart.trim() && r.inspectionTime < inspectionTimeStart.trim()) {
+          return false
+        }
+        if (inspectionTimeEnd.trim()) {
+          const endTime = inspectionTimeEnd.trim() + ' 23:59'
+          if (r.inspectionTime > endTime) {
+            return false
+          }
+        }
+        if (result.trim() && r.result !== result.trim()) {
+          return false
+        }
+        if (reportStatus.trim() && r.reportStatus !== reportStatus.trim()) {
+          return false
+        }
+        return true
+      })
+
+      filtered = filtered.sort((a, b) => new Date(b.inspectionTime) - new Date(a.inspectionTime))
+
+      const total = filtered.length
+      const passed = filtered.filter(r => r.result === '合格').length
+      const failed = filtered.filter(r => r.result === '不合格').length
+      const pending = filtered.filter(r => r.reportStatus === '待审核').length
+
+      jsonResp(res, {
+        records: filtered,
+        statistics: { total, passed, failed, pending }
+      })
       return
     }
 

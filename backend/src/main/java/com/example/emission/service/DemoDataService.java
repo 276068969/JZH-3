@@ -385,16 +385,82 @@ public class DemoDataService {
   }
 
   public List<InspectionRecord> inspections(String plateNumber) {
-    List<InspectionRecord> result;
-    if (plateNumber == null || plateNumber.isBlank()) {
-      result = new ArrayList<>(inspections);
-    } else {
-      result = inspections.stream()
-          .filter(record -> record.getPlateNumber().equalsIgnoreCase(plateNumber.trim()))
-          .collect(Collectors.toList());
-    }
-    return result.stream()
+    return filterInspections(plateNumber, null, null, null, null, null);
+  }
+
+  public List<InspectionRecord> filterInspections(String plateNumber, String stationName,
+                                                   String inspectionTimeStart, String inspectionTimeEnd,
+                                                   String result, String reportStatus) {
+    List<InspectionRecord> filtered = this.inspections.stream()
+        .filter(record -> {
+          if (plateNumber != null && !plateNumber.isBlank()) {
+            if (!record.getPlateNumber().toUpperCase().contains(plateNumber.trim().toUpperCase())) {
+              return false;
+            }
+          }
+          if (stationName != null && !stationName.isBlank()) {
+            if (!record.getStationName().contains(stationName.trim())) {
+              return false;
+            }
+          }
+          if (inspectionTimeStart != null && !inspectionTimeStart.isBlank()) {
+            if (record.getInspectionTime() == null || record.getInspectionTime().compareTo(inspectionTimeStart.trim()) < 0) {
+              return false;
+            }
+          }
+          if (inspectionTimeEnd != null && !inspectionTimeEnd.isBlank()) {
+            String endTime = inspectionTimeEnd.trim() + " 23:59";
+            if (record.getInspectionTime() == null || record.getInspectionTime().compareTo(endTime) > 0) {
+              return false;
+            }
+          }
+          if (result != null && !result.isBlank()) {
+            if (!result.trim().equals(record.getResult())) {
+              return false;
+            }
+          }
+          if (reportStatus != null && !reportStatus.isBlank()) {
+            if (!reportStatus.trim().equals(record.getReportStatus())) {
+              return false;
+            }
+          }
+          return true;
+        })
         .sorted((a, b) -> b.getInspectionTime().compareTo(a.getInspectionTime()))
+        .collect(Collectors.toList());
+    return filtered;
+  }
+
+  public Map<String, Object> getInspectionsWithStats(String plateNumber, String stationName,
+                                                      String inspectionTimeStart, String inspectionTimeEnd,
+                                                      String result, String reportStatus) {
+    List<InspectionRecord> filtered = filterInspections(plateNumber, stationName,
+        inspectionTimeStart, inspectionTimeEnd, result, reportStatus);
+
+    long passedCount = filtered.stream()
+        .filter(r -> "合格".equals(r.getResult()))
+        .count();
+    long failedCount = filtered.stream()
+        .filter(r -> "不合格".equals(r.getResult()))
+        .count();
+    long pendingCount = filtered.stream()
+        .filter(r -> "待审核".equals(r.getReportStatus()))
+        .count();
+
+    return Map.of(
+        "records", filtered,
+        "statistics", Map.of(
+            "total", filtered.size(),
+            "passed", (int) passedCount,
+            "failed", (int) failedCount,
+            "pending", (int) pendingCount
+        )
+    );
+  }
+
+  public List<String> getAllStationNames() {
+    return allStations.stream()
+        .map(Station::name)
         .collect(Collectors.toList());
   }
 

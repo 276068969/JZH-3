@@ -35,6 +35,27 @@ export interface InspectionRecord {
   auditOpinion?: string
 }
 
+export interface InspectionFilterParams {
+  plateNumber?: string
+  stationName?: string
+  inspectionTimeStart?: string
+  inspectionTimeEnd?: string
+  result?: string
+  reportStatus?: string
+}
+
+export interface InspectionStatistics {
+  total: number
+  passed: number
+  failed: number
+  pending: number
+}
+
+export interface InspectionFilterResult {
+  records: InspectionRecord[]
+  statistics: InspectionStatistics
+}
+
 export interface AuditRecord {
   id: number
   inspectionNo: string
@@ -169,6 +190,12 @@ export const searchVehicle = (keyword: string) =>
 
 export const fetchInspections = (plateNumber?: string) =>
   http.get<InspectionRecord[]>('/inspections', { params: { plateNumber } })
+
+export const fetchInspectionsWithFilter = (params: InspectionFilterParams) =>
+  http.get<InspectionFilterResult>('/inspections/filter', { params })
+
+export const fetchStationNames = () =>
+  http.get<string[]>('/inspections/station-names')
 
 export const fetchInspectionDetail = (inspectionNo: string) =>
   http.get<InspectionRecord>('/inspections/detail', { params: { inspectionNo } })

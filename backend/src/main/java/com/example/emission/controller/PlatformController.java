@@ -89,6 +89,25 @@ public class PlatformController {
     return demoDataService.inspections(plateNumber);
   }
 
+  @GetMapping("/inspections/filter")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
+  public Map<String, Object> filterInspections(
+      @RequestParam(required = false) String plateNumber,
+      @RequestParam(required = false) String stationName,
+      @RequestParam(required = false) String inspectionTimeStart,
+      @RequestParam(required = false) String inspectionTimeEnd,
+      @RequestParam(required = false) String result,
+      @RequestParam(required = false) String reportStatus) {
+    return demoDataService.getInspectionsWithStats(plateNumber, stationName,
+        inspectionTimeStart, inspectionTimeEnd, result, reportStatus);
+  }
+
+  @GetMapping("/inspections/station-names")
+  @PreAuthorize("hasAnyRole('平台管理员', '监管人员', '检测站工作人员')")
+  public List<String> getStationNames() {
+    return demoDataService.getAllStationNames();
+  }
+
   @PostMapping("/inspections/audit")
   @PreAuthorize("hasAnyRole('平台管理员', '监管人员')")
   public Map<String, Object> audit(@RequestBody AuditRequest request, Authentication authentication) {

@@ -103,15 +103,114 @@
             <div class="section-header">
               <h2>{{ auth.isStation ? '本站检测记录' : '检测记录审核' }}</h2>
               <div class="filter-bar">
-                <el-radio-group v-model="statusFilter" @change="filterRecords">
-                  <el-radio-button label="all">全部</el-radio-button>
-                  <el-radio-button label="pending">待审核</el-radio-button>
-                  <el-radio-button label="audited">已审核</el-radio-button>
-                  <el-radio-button label="rejected">已退回</el-radio-button>
-                </el-radio-group>
-                <el-button type="primary" :icon="Refresh" @click="loadData">刷新</el-button>
+                <el-button type="primary" :icon="Search" @click="toggleAdvancedFilter">
+                  {{ advancedFilterVisible.includes('filter') ? '收起筛选' : '高级筛选' }}
+                </el-button>
+                <el-button type="primary" :icon="Refresh" @click="loadInspectionData">刷新</el-button>
               </div>
             </div>
+
+            <el-collapse v-model="advancedFilterVisible">
+              <el-collapse-item title="筛选条件" name="filter">
+                <el-form :inline="true" class="advanced-filter-form">
+                  <el-form-item label="车牌号">
+                    <el-input
+                      v-model="filterParams.plateNumber"
+                      placeholder="请输入车牌号"
+                      clearable
+                      style="width: 160px"
+                      @keyup.enter="applyFilter"
+                    />
+                  </el-form-item>
+                  <el-form-item label="检测站" v-if="!auth.isStation">
+                    <el-select
+                      v-model="filterParams.stationName"
+                      placeholder="请选择检测站"
+                      clearable
+                      style="width: 220px"
+                    >
+                      <el-option
+                        v-for="name in stationNames"
+                        :key="name"
+                        :label="name"
+                        :value="name"
+                      />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="检测时间">
+                    <el-date-picker
+                      v-model="filterParams.inspectionTimeStart"
+                      type="date"
+                      placeholder="开始日期"
+                      value-format="YYYY-MM-DD"
+                      style="width: 160px"
+                    />
+                    <span style="margin: 0 8px">至</span>
+                    <el-date-picker
+                      v-model="filterParams.inspectionTimeEnd"
+                      type="date"
+                      placeholder="结束日期"
+                      value-format="YYYY-MM-DD"
+                      style="width: 160px"
+                    />
+                  </el-form-item>
+                  <el-form-item label="检测结果">
+                    <el-select
+                      v-model="filterParams.result"
+                      placeholder="请选择结果"
+                      clearable
+                      style="width: 140px"
+                    >
+                      <el-option
+                        v-for="r in resultOptions"
+                        :key="r"
+                        :label="r"
+                        :value="r"
+                      />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="报告状态">
+                    <el-select
+                      v-model="filterParams.reportStatus"
+                      placeholder="请选择状态"
+                      clearable
+                      style="width: 140px"
+                    >
+                      <el-option
+                        v-for="s in reportStatusOptions"
+                        :key="s"
+                        :label="s"
+                        :value="s"
+                      />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item>
+                    <el-button type="primary" @click="applyFilter">查询</el-button>
+                    <el-button @click="resetFilter">重置</el-button>
+                  </el-form-item>
+                </el-form>
+              </el-collapse-item>
+            </el-collapse>
+
+            <div class="statistics-bar" v-if="activeMenu === 'records'">
+              <div class="stat-item stat-total">
+                <div class="stat-label">总记录数</div>
+                <div class="stat-value">{{ inspectionStatistics.total }}</div>
+              </div>
+              <div class="stat-item stat-passed">
+                <div class="stat-label">合格</div>
+                <div class="stat-value">{{ inspectionStatistics.passed }}</div>
+              </div>
+              <div class="stat-item stat-failed">
+                <div class="stat-label">不合格</div>
+                <div class="stat-value">{{ inspectionStatistics.failed }}</div>
+              </div>
+              <div class="stat-item stat-pending">
+                <div class="stat-label">待审核</div>
+                <div class="stat-value">{{ inspectionStatistics.pending }}</div>
+              </div>
+            </div>
+
             <el-table :data="filteredRecords" border stripe>
               <el-table-column prop="inspectionNo" label="检测编号" min-width="150" />
               <el-table-column prop="plateNumber" label="车牌号" width="120" />
@@ -475,6 +574,8 @@ import {
   fetchAuditRecords,
   fetchDashboard,
   fetchInspections,
+  fetchInspectionsWithFilter,
+  fetchStationNames,
   fetchWarnings,
   fetchStationStatuses,
   fetchStations,
@@ -490,7 +591,9 @@ import {
   type WarningRecord,
   type StationStatus,
   type Vehicle,
-  type PollutantLimitRule
+  type PollutantLimitRule,
+  type InspectionFilterParams,
+  type InspectionStatistics
 } from '@/api/platform'
 import { useAuthStore, UserRole } from '@/stores/auth'
 
@@ -505,9 +608,30 @@ const vehicleList = ref<Vehicle[]>([])
 const vehicleSearchKeyword = ref('')
 const trendChart = ref<HTMLElement | null>(null)
 const standardChart = ref<HTMLElement | null>(null)
-const statusFilter = ref('all')
 const warningFilter = ref('all')
 const timeRange = ref<number>(7)
+const statusFilter = ref('all')
+
+const stationNames = ref<string[]>([])
+const inspectionStatistics = ref<InspectionStatistics>({
+  total: 0,
+  passed: 0,
+  failed: 0,
+  pending: 0
+})
+
+const filterParams = reactive<InspectionFilterParams>({
+  plateNumber: '',
+  stationName: '',
+  inspectionTimeStart: '',
+  inspectionTimeEnd: '',
+  result: '',
+  reportStatus: ''
+})
+
+const advancedFilterVisible = ref<string[]>([])
+const resultOptions = ['合格', '不合格']
+const reportStatusOptions = ['待审核', '已审核', '已退回']
 let trendChartInstance: echarts.ECharts | null = null
 let standardChartInstance: echarts.ECharts | null = null
 
@@ -610,15 +734,17 @@ const metrics = computed<Metric[]>(() => {
 
 const filteredRecords = computed(() => {
   let result = records.value
-  if (auth.isStation) {
-    result = result.filter(r => r.stationName.includes('朝阳'))
+  if (auth.isStation && auth.user?.displayName) {
+    result = result.filter(r => r.stationName.includes(auth.user.displayName))
   }
-  if (statusFilter.value === 'all') return result
-  if (statusFilter.value === 'pending') return result.filter(r => r.reportStatus === '待审核')
-  if (statusFilter.value === 'audited') return result.filter(r => r.reportStatus === '已审核')
-  if (statusFilter.value === 'rejected') return result.filter(r => r.reportStatus === '已退回')
   return result
 })
+
+watch(filteredRecords, (newRecords) => {
+  if (activeMenu.value === 'records') {
+    calculateLocalStatistics(newRecords)
+  }
+}, { immediate: true, deep: true })
 
 const filteredWarnings = computed(() => {
   if (warningFilter.value === 'all') return warnings.value
@@ -675,6 +801,9 @@ const handleMenuSelect = (index: string) => {
   if (index === 'rules') {
     loadRuleData()
   }
+  if (index === 'records') {
+    loadInspectionData()
+  }
 }
 
 const goHome = () => {
@@ -697,6 +826,75 @@ const loadData = async () => {
   records.value = recordResp.data
   warnings.value = warningResp.data
   await renderCharts()
+}
+
+const loadInspectionData = async () => {
+  try {
+    const params: InspectionFilterParams = {}
+    if (filterParams.plateNumber?.trim()) params.plateNumber = filterParams.plateNumber.trim()
+    if (filterParams.stationName?.trim()) params.stationName = filterParams.stationName.trim()
+    if (filterParams.inspectionTimeStart) params.inspectionTimeStart = filterParams.inspectionTimeStart
+    if (filterParams.inspectionTimeEnd) params.inspectionTimeEnd = filterParams.inspectionTimeEnd
+    if (filterParams.result?.trim()) params.result = filterParams.result.trim()
+    if (filterParams.reportStatus?.trim()) params.reportStatus = filterParams.reportStatus.trim()
+
+    const { data } = await fetchInspectionsWithFilter(params)
+    records.value = data.records
+    allRecords.value = data.records
+    await nextTick()
+    calculateLocalStatistics(filteredRecords.value)
+  } catch (e) {
+    ElMessage.error('加载检测记录失败')
+  }
+}
+
+const applyFilter = async () => {
+  await loadInspectionData()
+}
+
+const resetFilter = () => {
+  filterParams.plateNumber = ''
+  filterParams.stationName = ''
+  filterParams.inspectionTimeStart = ''
+  filterParams.inspectionTimeEnd = ''
+  filterParams.result = ''
+  filterParams.reportStatus = ''
+  loadInspectionData()
+}
+
+const toggleAdvancedFilter = () => {
+  if (advancedFilterVisible.value.includes('filter')) {
+    advancedFilterVisible.value = []
+  } else {
+    advancedFilterVisible.value = ['filter']
+  }
+}
+
+const loadStationNames = async () => {
+  try {
+    const { data } = await fetchStationNames()
+    stationNames.value = data
+  } catch (e) {
+    // 使用默认值
+    stationNames.value = [
+      '朝阳机动车环保检测站',
+      '海淀机动车检测中心',
+      '亦庄机动车检测站',
+      '西城机动车检测站',
+      '东城车辆检测中心',
+      '丰台环保检测站',
+      '通州机动车检测站',
+      '石景山检测中心'
+    ]
+  }
+}
+
+const calculateLocalStatistics = (recordList: InspectionRecord[]) => {
+  const total = recordList.length
+  const passed = recordList.filter(r => r.result === '合格').length
+  const failed = recordList.filter(r => r.result === '不合格').length
+  const pending = recordList.filter(r => r.reportStatus === '待审核').length
+  inspectionStatistics.value = { total, passed, failed, pending }
 }
 
 const loadStationData = async () => {
@@ -861,7 +1059,11 @@ const submitAudit = async () => {
     if (data.success) {
       ElMessage.success(data.message)
       auditDialogVisible.value = false
-      await loadData()
+      if (activeMenu.value === 'records') {
+        await loadInspectionData()
+      } else {
+        await loadData()
+      }
     } else {
       ElMessage.error(data.message)
     }
@@ -1008,7 +1210,8 @@ const loadFuelAndStandardOptions = async () => {
 onMounted(async () => {
   await Promise.all([
     loadData(),
-    loadFuelAndStandardOptions()
+    loadFuelAndStandardOptions(),
+    loadStationNames()
   ])
   if (activeMenu.value === 'stations') {
     await loadStationData()
@@ -1018,6 +1221,9 @@ onMounted(async () => {
   }
   if (activeMenu.value === 'rules') {
     await loadRuleData()
+  }
+  if (activeMenu.value === 'records') {
+    await loadInspectionData()
   }
 })
 </script>
@@ -1125,6 +1331,85 @@ onMounted(async () => {
 
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.advanced-filter-form {
+  padding: 16px 0 8px;
+}
+
+.advanced-filter-form .el-form-item {
+  margin-bottom: 16px;
+}
+
+.statistics-bar {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.stat-item {
+  flex: 1;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  background: #f5f7fa;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.stat-total .stat-value {
+  color: #409eff;
+}
+
+.stat-passed .stat-value {
+  color: #67c23a;
+}
+
+.stat-failed .stat-value {
+  color: #f56c6c;
+}
+
+.stat-pending .stat-value {
+  color: #e6a23c;
+}
+
+.el-collapse {
+  border: none;
+  margin-bottom: 0;
+}
+
+.el-collapse-item :deep(.el-collapse-item__header) {
+  border-bottom: none;
+  padding: 0;
+  height: auto;
+  line-height: normal;
+  margin-bottom: 8px;
+}
+
+.el-collapse-item :deep(.el-collapse-item__wrap) {
+  border-bottom: 1px solid #ebeef5;
+}
+
+@media (max-width: 768px) {
+  .statistics-bar {
+    flex-wrap: wrap;
+  }
+  
+  .stat-item {
+    flex: 1 1 40%;
+    min-width: 120px;
   }
 }
 </style>
