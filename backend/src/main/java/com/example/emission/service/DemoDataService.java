@@ -270,10 +270,6 @@ public class DemoDataService {
     return Optional.ofNullable(users.get(username));
   }
 
-  public Optional<UserAccount> findUserByUsername(String username) {
-    return Optional.ofNullable(users.get(username));
-  }
-
   public Optional<Vehicle> searchVehicle(String keyword) {
     String normalized = normalizeKeyword(keyword);
     if (normalized.isEmpty()) {
